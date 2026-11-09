@@ -75,3 +75,11 @@
 - **Reviewed** · main at 8e61ac9, ali/badge-k8s at 408d198, ali/badge-simulator at e137f36, kunj/agent-board-docs at efc6c1f, and the prior Luke badge integration at f72fec2.
 
 - **Verified** · make check passed (3 tests). make check-api with BADGE_SMOKE_SOURCE pointing at the merged simulator passed (14 tests, 1 opt-in live Elastic test skipped). The local HTTP test required localhost binding permission and passed on rerun. Pinned archive extraction, runtime contract presence, standalone YAML rendering, Python syntax, and git diff --check passed. Cluster apply and readiness remain unverified.
+
+## 2026-11-09 — Correct deployment factory startup after Ali's review
+
+- **Branch / PR** · luke/connect-badge-cluster, PR #7.
+- **Changes** · Corrected Uvicorn to `backstage_api.main:create_app --factory`. Added a test that loads the ASGI entrypoint from the actual Deployment command. Updated Ali's handoff to forbid secrets through logged Radar apply requests. Prepared a dedicated demo index definition and an ignored, mode-0600 local `.env.cluster` with generated private role tokens; no credentials are committed.
+- **Verified** · Deployment startup regression test passed. Earlier scaffold and local HTTP integration passed. Ali reported his Service/Deployment Radar dry run passes after the factory correction; this is Ali's evidence, not a live deployment observed here.
+- **Open** · No kubectl or kubeconfig is available here. No Kubernetes Secrets have been created or patched by Luke, and connect.py has not run. Demo index provisioning remains pending. Ali must wait for a secure Kubernetes access path before the live rehearsal. The local cluster env uses the existing web origin; confirm it with Kunj before applying.
+- **Reviewed** · main at 8e61ac9, connection branch at 5448f01, Ali's supplied review and cluster status, plus the previously reviewed lane handoffs. Ali's latest supplied report says all three badge workloads are healthy, BADGE_SIGNAL_TOKEN is empty, and the API/incident Secret do not exist.

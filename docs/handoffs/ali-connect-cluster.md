@@ -16,7 +16,7 @@ Schedule this between rehearsals. Restarting badge-control loses its current in-
 
 The deployment uses `APP_MODE=live`. Luke must provide the Elastic endpoint and API key privately, with a dedicated provisioned demo alias. Follow [Elasticsearch setup](../../data/elasticsearch/README.md); do not repurpose `backstage-smoke-overflow-state`, which contains the isolated smoke evidence. If the demo alias or credentials are missing, report that exact blocker before deploying.
 
-Create `incident-secrets` in `team-backstage` through a credential-safe cluster interface, containing:
+Luke must create `incident-secrets` in `team-backstage` using kubectl and an ignored local `.env.cluster` file. Do not submit secret values through Radar `apply_resource`, which logs resource bodies. The Secret must contain:
 
 | Key | Value |
 | --- | --- |
@@ -48,7 +48,7 @@ If you have kubectl instead, [the deployment README](../../deploy/incident/READM
 
 The API manifest already sets `BADGE_SERVICE_URL=http://badge-control:8090`.
 
-Using Radar, merge these changes into the existing objects, preserving every unrelated key:
+Luke must set the signal token using kubectl or `connect.py --apply`, preserving all other Secret keys. Ali can update the non-secret ConfigMap through Radar after that:
 
 - Set `badge-secrets.BADGE_SIGNAL_TOKEN` to the exact producer token used as a key in `AUTH_TOKENS_JSON`.
 - Set `badge-config.INCIDENT_API_BASE_URL` to `http://incident-api:8000/api/v1`.

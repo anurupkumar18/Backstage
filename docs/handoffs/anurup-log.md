@@ -15,3 +15,12 @@
 - Changes and why: include the existing presence-copy regression file and mock transport adapter in the exact-file allowlist. The contribution makes mock evidence explicitly unavailable and reuses Kunj's corrected privacy-copy assertion.
 - Verified commands and results: ownership tests remain 5/5; no ownership grants outside the implemented evidence integration.
 - Next action: Luke lands this prerequisite using the existing authorized maintainer flow. Feature runtime proof continues separately.
+
+## 2026-11-09 — Permit the verified phone navigation correction
+
+- Branch: `anurup/responsive-ownership`; prerequisite for the evidence feature PR.
+- Change: add exactly `apps/web/src/styles.css` to Anurup's contributor grant. No owner is replaced and no workflow/check bypass is included.
+- Reason: after integrating Kunj's four-link navigation from main5465ebc, Playwright measured a390px viewport with454px document width. A single `grid-template-columns: minmax(0, 1fr)` on `.shell__header` restores390/390 and allows existing flex wrapping. The feature branch contains the tested correction; this grant must land on its base first.
+- Verified: evidence branch full136 Vitest +30 Node tests, typecheck/build; browser390/768/1440/1920 all fit. Ownership checker regression suite is unchanged.
+- Next owner: Luke lands this narrow addendum, as with PR16. Feature delivery continues independently.
+- Reviewed: main5465ebc including Kunj's briefing/voice scope fixes; all lane logs through the previous integration.

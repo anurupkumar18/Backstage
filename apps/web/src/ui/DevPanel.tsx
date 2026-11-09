@@ -1,3 +1,5 @@
+import { CrowdSimulator } from "./CrowdSimulator";
+
 export interface DevPanelProps {
   onBumpVersion(): void;
   onProbeDeniedApprove(): void;
@@ -44,6 +46,7 @@ export function DevPanel({ onBumpVersion, onProbeDeniedApprove, onDropNextRespon
           <span>Returns the incident to its starting state.</span>
         </li>
       </ul>
+      <CrowdSimulator capacity={80} initial={96} />
     </details>
   );
 }

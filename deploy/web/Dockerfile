@@ -8,6 +8,7 @@ COPY apps/web/package.json apps/web/package-lock.json ./apps/web/
 RUN cd apps/web && npm ci --no-audit --no-fund
 COPY apps/web/index.html apps/web/stage.html apps/web/vite.config.ts apps/web/tsconfig.json ./apps/web/
 COPY apps/web/src ./apps/web/src
+COPY apps/web/public ./apps/web/public
 # VITE_ values are baked into the bundle. They are endpoints and flags only, never tokens.
 ARG VITE_API_BASE_URL=/api/v1
 ARG VITE_MOCK_API=false

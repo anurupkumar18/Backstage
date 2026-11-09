@@ -43,7 +43,7 @@ Ali's current platform overlay includes badge and incident only. Add `../dash0` 
 
 - nginx resolves `incident-api` and `otel-collector` when it starts. If either Service is missing, the pod fails `nginx -t` and crash-loops. Apply the Services first. They resolve as soon as they exist, even before their pods are ready.
 - `getUserMedia` works only in a secure context. A stage page served over plain HTTP on a cluster or LAN address gets no microphone. On the stage laptop, use `kubectl port-forward svc/web 8080:80` and open `http://localhost:8080/stage.html`, or put TLS in front. The manual fallback works either way.
-- The response headers set `Permissions-Policy: microphone=(self)`.
+- The response headers set `Permissions-Policy: microphone=(self), camera=(self)`. Camera permission is requested only by the video page’s explicit camera button.
 
 ## Earlier static-image verification on 2026-11-09
 
@@ -62,6 +62,12 @@ Open question: does the venue demo reach `web` through an Ingress with TLS, so t
 Both Docker targets built successfully, including TypeScript and the production Vite build. Kustomize rendering and strict kubeconform validation passed for Deployment and Service. All 30 Node server tests passed.
 
 A local Docker smoke test shared the nginx container's network with the loopback runtime, with a stub incident API and a fake OpenAI key. Root, health, presence reads and joining returned 200. Briefing with an invalid Backstage bearer returned 401 before any vendor mint. Transcription, triage, OpenAI health and presence reset routes returned 404. `nginx -t` passed. No real credentials, vendor calls or cluster changes were used. This does not verify the deployed cluster or a real microphone.
+
+## Video and vision demo
+
+`#/demo` includes the 30-second HBO conference edit, its source/prerecorded labels and recorded real YOLO results. The Docker build copies `apps/web/public` so the video and annotation JSON ship with the site. Static nginx supports range requests for scrubbing. Source/timecode/model provenance is in `/demo/source.json`.
+
+Fresh YOLO inference from a local file or webcam uses the optional [loopback preview server](../../apps/web/camera/README.md), connected through Vite on the laptop. The production image returns 503 for `/camera/*` until an authenticated inference service is deliberately deployed; it retains recorded detection playback. Camera access requires a click and HTTPS or localhost. This change does not deploy the model, send count signals or establish live transcription.
 
 ## Browser monitoring ingest
 

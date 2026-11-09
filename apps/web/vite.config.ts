@@ -25,6 +25,7 @@ export default defineConfig({
     fs: { allow: [repoRoot] },
     allowedHosts: process.env.DEMO_PUBLIC === "1" ? true : undefined,
     proxy: {
+      "/camera": { target: process.env.CAMERA_PROXY_TARGET ?? "http://127.0.0.1:8766", changeOrigin: true, rewrite: (path) => path.replace(/^\/camera/, "") },
       "/otel": {
         target: process.env.OTEL_PROXY_TARGET ?? "http://127.0.0.1:4318",
         changeOrigin: true,

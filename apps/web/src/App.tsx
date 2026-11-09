@@ -15,6 +15,7 @@ import { MockIncidentApi } from "./mock/store";
 import { createMockTransport, DEMO_IDENTITIES, MOCK_PRINCIPALS } from "./mock/transport";
 import { VoiceBriefingControl } from "./ui/VoiceBriefingControl";
 import { useInbox } from "./hooks/useInbox";
+import { HistoryView } from "./ui/HistoryView";
 import { InboxView } from "./ui/InboxView";
 import type { Identity } from "./ui/types";
 import { AppShell, BoardView, DevPanel, JoinPage, StatusView } from "./ui";
@@ -140,7 +141,9 @@ export default function App() {
       announcement={announcement}
       devPanel={devPanel}
     >
-      {route === "me" && identity && identity.tier > 0 ? (
+      {route === "history" ? (
+        <HistoryView key={`history-${identityId}-${token}`} client={client} mockMode={MOCK_MODE} />
+      ) : route === "me" && identity && identity.tier > 0 ? (
         <InboxRoute token={token} key={`inbox-${identityId}-${token}`} client={client} identity={identity} announce={setAnnouncement} />
       ) : route === "board" ? (
         <BoardRoute key={`board-${identityId}-${token}`} presence={presence} client={client} announce={setAnnouncement} registerProbe={registerProbe} />

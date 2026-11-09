@@ -152,3 +152,11 @@
 - **Verified commands and results** · TypeScript, production Vite build, 122 frontend tests and 30 server tests pass. Browser checks: 1440px desktop and 390px phone, dark projector, no horizontal overflow in phone inbox/check-in, keyboard approval to Dispatched and staff acceptance to Accepted in the labelled mock, anonymous check-in success. Screenshots saved in the chat outputs; design decisions and attribution in docs/demo/ui-design.md.
 - **Open issues and next owner or action** · Real deployment, microphone and venue projector lighting remain separate verification. This patch makes no new live integration claim.
 - **References and latest handoffs reviewed** · main 99e10ac, Kunj 9cc5883, Ali cf3fcbd / 408d198, Luke 478a3f4 and Anurup #16; latest main was fetched again before publication. User asked for periodic pulls; local changes were preserved.
+
+## 2026-11-09 — History tab from saved API incidents
+
+- **Branch** · Published on main at Luke's explicit request; integrated upstream main 7fe7c40 before pushing.
+- **Changes** · Added #/history navigation, newest-first saved incident list, search and status filters, and expandable read-only event history with failed-read retry. Uses existing authenticated incident/events endpoints, with no schema or database changes. The earlier header redesign remains reverted.
+- **Verified** · Production build and 34 focused UI tests pass. Browser against the real local API/Elasticsearch displayed the resolved Room B incident and all eight events, with zero unresolved matches and one resolved match. Narrow-screen layout inspected. Tests cover filters, event loading/retry, and removing prior data on permission denial.
+- **Impact** · History is scoped to the API connected to the web app. This local run uses backstage-local-overflow-state, not the separate cluster rehearsal index. No credentials are added to the frontend or Git. Refresh history fetches current data; automatic polling is not enabled for this view.
+- **Reviewed** · main 7fe7c40 (including Anurup's narrow responsive ownership grant), Kunj's latest visual/voice handoffs, and the existing incident/events API contracts. Existing endpoints return all authorized records with next_cursor=null; pagination would need a client extension if the backend later introduces cursors.

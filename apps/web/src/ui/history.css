@@ -1,0 +1,29 @@
+.history { padding: 24px 0; }
+.history__heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.history__heading h1 { margin: 0 0 8px; }
+.history__heading p, .history__meta, .history time, .history__count { color: var(--muted); font-size: 0.875rem; }
+.history__filters { display: flex; gap: 16px; margin-bottom: 20px; }
+.history__filters .field:first-child { flex: 1; max-width: 32rem; }
+.history__count { margin-bottom: 12px; }
+.history__incident { border: 1px solid var(--border); border-radius: 8px; background: var(--panel); margin-bottom: 12px; }
+.history__incident summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 24px; padding: 20px; cursor: pointer; list-style: none; }
+.history__incident summary::-webkit-details-marker { display: none; }
+.history__incident summary > span:first-child::before { content: "+"; float: left; margin-right: 12px; }
+.history__incident[open] summary > span:first-child::before { content: "−"; }
+.history__meta { display: block; margin-top: 4px; }
+.history__state { font-size: 0.875rem; font-weight: 600; }
+.history__detail { border-top: 1px solid var(--border); padding: 20px; }
+.history__detail h2 { font-size: 1rem; margin: 24px 0 12px; }
+.history__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+.history__facts dt { color: var(--muted); font-size: 0.8125rem; margin-bottom: 4px; }
+.history__facts dd { margin: 0; overflow-wrap: anywhere; }
+.history__events { list-style: none; padding: 0; }
+.history__events li { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.history__events time { flex-shrink: 0; }
+@media (max-width: 40rem) {
+  .history__heading, .history__filters { flex-direction: column; align-items: stretch; }
+  .history__incident summary { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 16px; }
+  .history__incident summary time { grid-column: 1 / -1; }
+  .history__facts { grid-template-columns: 1fr; }
+  .history__events li { flex-direction: column; gap: 4px; }
+}

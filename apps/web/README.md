@@ -41,3 +41,7 @@ See [frontend integration patterns](agent_docs/frontend_patterns.md) before chan
 The inbox summarizes scoped events newer than the last successful visit and refreshes the brief after 60 seconds away. Only timestamps are persisted; denied/loading views do not mark history seen. Templates never change incident actions or invent verification.
 
 Voice is off by default. See [the local voice setup and boundary](../../docs/demo/openai.md) before enabling `VITE_ENABLE_VOICE=true`. `npm run presence` now serves the combined presence/OpenAI routes on loopback; existing `/presence` URLs are unchanged. Server tests run under `npm test` or `npm run test:server`. A standard OpenAI key is read only from the Node server environment.
+
+## History
+
+`#/history` lists incidents returned by the authenticated API, newest update first. Search by incident, room or assignee, filter resolved/unresolved, and expand an incident to load its event timeline. Refresh history reloads saved records. In live mode these reads use the API's existing Elasticsearch-backed checkpoint; no new index is required. In mock mode the page labels the data as sample history. Role/token changes remount the view and existing API authorization applies to both incident and event reads.

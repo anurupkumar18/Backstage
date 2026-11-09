@@ -71,3 +71,12 @@
 - **Verified commands and results** · `git diff --check` passes; same code as the 91-test, TypeScript/build and live-browser verified inbox entry above.
 - **Open issues and next owner or action** · Merge PR #12 before the inbox and retarget the inbox to main.
 - **References and latest handoffs reviewed** · PR #12 `4d2d5c6`, inbox `5578951`; no new remote dependencies.
+
+## 2026-11-09 — Reload timeline history after a temporary denial
+
+- **Branch or PR** · `kunj/personal-inbox`, PR #13 review follow-up.
+- **Changes and why** · Gitar found that clearing event data after a denied incident read left the successful-version markers behind. Clear those markers together and advance an event epoch, so history reloads at the same incident version and outstanding older reads cannot repopulate the cleared cache.
+- **Impact by lane** · Web polling only; no contract or API change.
+- **Verified commands and results** · Regression reproduces success → 403 → same-version success and confirms two timeline reads. Frontend 92/92, TypeScript and build pass on Node 22.
+- **Open issues and next owner or action** · Dependent activity and briefing branches must merge this fix before review.
+- **References and latest handoffs reviewed** · PR #13 Gitar inline review and inbox `80313dd`; previous reviewed lane handoffs remain current.

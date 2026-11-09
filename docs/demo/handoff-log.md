@@ -196,3 +196,10 @@
 - **Reviewed** · main395ed2b then5e90f3b/PR24; Ali deploy-web7aaa1f6 then07f1169 (LoadBalancer quota rejection/reversion), Luke478a3f4, Anurupf536b757/PR22 and current main handoffs. New files stay in Kunj’s owned paths; no shared contract or edge changes.
 
 - Final integrated checks:147 UI,30 Node,4 Linux Python tests pass; TypeScript and production Docker build pass. The in-cluster source pin is3de777b3792e96e80050c55bd10cf1a5de25db69; the smoke Job uses the existing incident Secret in-cluster and suppresses all credential/response values. Its exact tool-name assertion was corrected before publication.
+
+
+## 2026-11-09 — Isolate hosted detector rate budgets
+
+- **Branch or PR** · `kunj/hosted-vision`, PR25 Gitar follow-up.
+- **Change** · Gitar identified that all gateway clients share a remote IP and the detector used the telemetry bucket. Added a separate vision_detect zone keyed by Authorization at4r/s with burst4, preserving the independent telemetry limit. Unauthenticated callers still fail the auth_request gate; bearer values never enter access logs. No untrusted X-Forwarded-For trust was added.
+- **Verified** · nginx configuration/auth tests run against real Linux YOLO, and CI scaffold/changed-paths were green on the previous head. Final pin/rollout evidence follows. Public HTTPS backend change was explicitly approved by the user; original route and Deployment saved for rollback. No credential fields were altered by this patch.

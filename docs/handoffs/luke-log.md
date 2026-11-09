@@ -16,6 +16,13 @@
 - **Verified** · `make check` and `make check-api` passed locally. A running Uvicorn instance accepted demo tokens, the browser origin, and a sample signal.
 - **Open** · Incident data lives in memory and resets on restart. Luke owns the Elasticsearch follow-up. Kunj owns board integration.
 
+## 2026-11-09 — Radar Cloud MCP config published
+
+- **Branch and commit** · [main at fb822f1](https://github.com/lukeeskinner/Backstage/commit/fb822f1db5a733a2de594c15b65e562a8e974205)
+- **Changes** · Added repository-level Radar Cloud MCP configuration.
+- **Ali** · Check Radar access from your coding environment before wiring the scoped diagnostic. The local badge simulator can continue in mock mode while access is being confirmed.
+- **Verified** · Confirmed the config file in the published commit. Connection validation remains open.
+
 ## 2026-11-09 — Per-push team handoffs
 
 - **Branches** · `main` and `luke/overflow-api`

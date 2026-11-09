@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ApiClient } from "../api/client";
+import { deriveAgentActivity } from "../inbox/agentActivity";
 import { deriveInbox } from "../inbox/deriveInbox";
 import type { Identity } from "../ui/types";
 import { useBoard } from "./useBoard";
@@ -37,6 +38,7 @@ export function useInbox(client: ApiClient, identity: Identity, announce: (messa
   return {
     ...board, ...actions,
     items: deriveInbox(board.incidents, board.eventsById, identity, lastSeen),
+    activity: deriveAgentActivity(board.incidents, board.eventsById),
     markSeen,
   };
 }

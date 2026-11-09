@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { Incident, PresenceCounts, ProtocolEvent } from "../api/types";
+import { deriveAgentActivity } from "../inbox/agentActivity";
 import { PresenceField } from "./PresenceField";
 import {
   PHASES,
@@ -133,7 +134,7 @@ export function BoardView({
         </div>
       ) : null}
 
-      {presence ? <PresenceField counts={presence} variant="compact" /> : null}
+      {presence ? <PresenceField counts={presence} variant="compact" agentActivity={deriveAgentActivity(incidents, eventsById)} /> : null}
 
       <CommandBar
         onCommand={onCommand}

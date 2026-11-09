@@ -71,3 +71,12 @@
 - **Verified commands and results** · `git diff --check` passes; same code as the 91-test, TypeScript/build and live-browser verified inbox entry above.
 - **Open issues and next owner or action** · Merge PR #12 before the inbox and retarget the inbox to main.
 - **References and latest handoffs reviewed** · PR #12 `4d2d5c6`, inbox `5578951`; no new remote dependencies.
+
+## 2026-11-09 — Scoped Venue, AV and IT activity dots
+
+- **Branch or PR** · `kunj/agent-activity`, stacked on `kunj/personal-inbox` / PR #13.
+- **Changes and why** · Derives the latest agent-authored event per domain from incident timelines already fetched under the current token. Added labelled dots and relative-time legends to the inbox and optional presence field in both hero and compact variants; BoardView passes its scoped events. Pulses last four seconds and reduced motion disables them. Actor IDs and payload text never enter the legend.
+- **Impact by lane** · No API, token, contract or public-projector changes. Public views do not fetch privileged event timelines. A quiet domain means no activity received in scope, not proof that it is idle.
+- **Verified commands and results** · Frontend 94 tests pass; TypeScript/build pass. Tests cover scope filtering, human-event exclusion, newest-event selection and text labels without an extra live region. Browser against the real local API shows Venue assignment activity and no received AV/IT events in the organizer inbox.
+- **Open issues and next owner or action** · Floor brief and optional voice are next; merge/retarget in order after PRs #12 and #13.
+- **References and latest handoffs reviewed** · Inbox `80313dd`, PR #12 token fix, floor-agent-plan phase 2; earlier lane handoff review remains current.

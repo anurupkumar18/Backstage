@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from unittest import TestCase
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
@@ -28,6 +29,7 @@ IDENTITIES = {
 
 class OverflowTests(TestCase):
     def setUp(self):
+        self.enterContext(patch.dict("os.environ", {"APP_MODE": "mock"}))
         self.signals = [json.loads(line) for line in FIXTURE.read_text().splitlines()]
         self.start = datetime.fromisoformat(self.signals[0]["occurred_at"])
         self.now = self.start

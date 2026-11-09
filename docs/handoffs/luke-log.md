@@ -29,3 +29,13 @@
 - **Changes** · Added [coding-agent instructions](../../AGENTS.md) and the [team update process](README.md). Backfilled the scaffold and Room B API entries so someone picking up either branch can recover the decisions and commands.
 - **Impact** · Each lane reads the latest pushed updates before work and appends a handoff with each push. The API branch also receives the instructions. Older checkouts can fetch and read them from `origin/main` immediately.
 - **Verified** · Checked documentation links and confirmed the scaffold and API commit references.
+
+## 2026-11-09 — Elasticsearch storage for the Room B demo
+
+- **Branch** · luke/elastic-overflow, based on main at fa1fbe9.
+- **Changes** · Live mode saves Room B incidents, event history, assignment deadlines, count evidence, and retry receipts together in Elasticsearch. The demo uses one versioned checkpoint and one writer per alias. Elasticsearch checks the last write version before accepting an update.
+- **Kunj** · Follow the [API setup and live mode guide](../../services/incident-api/README.md). If storage returns a 503 on an action, retry with the original body and idempotency key. The board still uses the v1 request and response shapes.
+- **Ali** · The checkpoint covers the Room B demo. Badge integration can continue against the existing shared contract and simulator.
+- **Verified** · make check and make check-api passed. The API tests exercised fresh app instances, an already-committed write with a lost response, an uncommitted write, and a version conflict through the Elasticsearch SDK with a simulated transport.
+- **Open** · Luke owns the real Cloud smoke test in an isolated index. The [index setup](../../data/elasticsearch/README.md) documents its alias. Searchable incident and timeline indices are follow-up work.
+- **Reviewed** · main at fa1fbe9, luke/overflow-api at 5dfc7a6, and ali/badge-simulator at 06e8f7b.

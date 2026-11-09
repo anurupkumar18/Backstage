@@ -32,6 +32,18 @@ Use Bearer tokens from the example only for local rehearsal. Enter demo-organize
 
 4. Check that the public view stays in recovery until the last sample. The final timeline event lists the signal IDs that proved recovery.
 
-Use GET /api/v1/status for the public room view and GET /api/v1/incidents for the organizer board. See the [v1 contract](../../contracts/openapi.yaml) for request and response shapes. Room B counts in the shared replay have no session ID, so a session-scoped identity sees an empty list. This slice uses in-memory data and local transition spans. Restarting the process resets the rehearsal. Report intake, other incident types, durable storage, and trace export are follow-up work.
+Use GET /api/v1/status for the public room view and GET /api/v1/incidents for the organizer board. See the [v1 contract](../../contracts/openapi.yaml) for request and response shapes. Room B counts in the shared replay have no session ID, so a session-scoped identity sees an empty list. Report intake, other incident types, and trace export are follow-up work.
 
 Run make check-api from the repository root for the accelerated lifecycle and permissions checks.
+
+## Keep incidents across restarts
+
+The default mock mode keeps data in memory. For live mode, provision the [overflow state index](../../data/elasticsearch/README.md), then set APP_MODE=live, ELASTICSEARCH_URL, and ELASTICSEARCH_API_KEY in your local environment before using the start command above. ELASTICSEARCH_INDEX_PREFIX defaults to backstage. Run one API worker per alias. GET /readyz returns 503 when the store is unavailable.
+
+An approval returns success only after Elasticsearch saves the checkpoint. If an action returns 503, retry with the same body and Idempotency-Key. If a signal returns 503, retry the same signal ID and payload. A retry can return the original result after the API restarts.
+
+To run the real Elasticsearch restart smoke test, first provision the empty backstage-smoke-overflow-state alias described above. With the same local environment loaded, run this from the repository root:
+
+    APP_MODE=live ELASTICSEARCH_INDEX_PREFIX=backstage-smoke BACKSTAGE_LIVE_SMOKE=1 make check-api
+
+This runs one synthetic Room B incident through closure and leaves the resulting record in the smoke index. Use an empty smoke index for each clean run.

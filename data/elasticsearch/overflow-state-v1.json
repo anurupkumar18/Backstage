@@ -1,0 +1,17 @@
+{
+  "settings": {
+    "index.mapping.source.mode": "stored"
+  },
+  "aliases": {
+    "backstage-overflow-state": {
+      "is_write_index": true
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "schema_version": { "type": "integer" },
+      "state": { "type": "object", "enabled": false }
+    }
+  }
+}

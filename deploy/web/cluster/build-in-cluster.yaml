@@ -35,7 +35,11 @@ spec:
             - name: VITE_ENABLE_VOICE
               value: "true"
             - name: VITE_BROWSER_OTLP_URL
-              value: ""
+              value: /otel
+            - name: VITE_SERVICE_VERSION
+              value: "$(CODE_SHA)"
+            - name: VITE_DEPLOYMENT_ENVIRONMENT
+              value: demo
           command:
             - sh
             - -ec

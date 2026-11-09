@@ -39,3 +39,11 @@
 - **Verified** · make check and make check-api passed. The API tests exercised fresh app instances, an already-committed write with a lost response, an uncommitted write, and a version conflict through the Elasticsearch SDK with a simulated transport.
 - **Open** · Luke owns the real Cloud smoke test in an isolated index. The [index setup](../../data/elasticsearch/README.md) documents its alias. Searchable incident and timeline indices are follow-up work.
 - **Reviewed** · main at fa1fbe9, luke/overflow-api at 5dfc7a6, and ali/badge-simulator at 06e8f7b.
+
+## 2026-11-09 — Room B restart verified on Elastic Cloud
+
+- **Branch** · main after PR #3.
+- **Changes** · Created the isolated backstage-smoke-overflow-state-v1 index and its backstage-smoke-overflow-state write alias. The smoke index contains one resolved synthetic Room B incident and its evidence and retry receipts.
+- **Verified** · The opt-in test_live_elasticsearch_restart passed against Elastic Cloud Serverless. Fresh FastAPI instances recovered the pre-incident counts, the approval and assignment, the original retry receipts, and progress toward the full minute of recovery. Repeating a headcount kept the incident count at one.
+- **Impact** · Kunj can use the live-mode instructions for a board rehearsal. The shared demo needs its own index and alias to keep rehearsal data separate from the smoke evidence.
+- **References and handoffs reviewed** · [Live mode and smoke instructions](../../services/incident-api/README.md), main at 85c786a, luke/elastic-overflow at de2884e, and ali/badge-simulator at 6595659.

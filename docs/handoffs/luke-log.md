@@ -47,3 +47,13 @@
 - **Verified** · The opt-in test_live_elasticsearch_restart passed against Elastic Cloud Serverless. Fresh FastAPI instances recovered the pre-incident counts, the approval and assignment, the original retry receipts, and progress toward the full minute of recovery. Repeating a headcount kept the incident count at one.
 - **Impact** · Kunj can use the live-mode instructions for a board rehearsal. The shared demo needs its own index and alias to keep rehearsal data separate from the smoke evidence.
 - **References and handoffs reviewed** · [Live mode and smoke instructions](../../services/incident-api/README.md), main at 85c786a, luke/elastic-overflow at de2884e, and ali/badge-simulator at 6595659.
+
+## 2026-11-09 — Badge simulator connected to the incident API
+
+- **Branch** · luke/badge-integration, based on main at 2555f30.
+- **Changes** · A fresh Station B report of Station A offline with aged pending work opens a Room C incident. The IT worker calls badge-control for diagnosis. Organizer approval and the assigned IT staff member's acceptance gate the reroute. The pending operation survives an API restart and retries with the same key. Closure requires a Station B completion signal and a matching badge-control job and PDF reference for every captured job.
+- **Kunj** · The existing v1 board can show the badge incident and organizer approval. Use demo-it-staff for the first IT assignment and demo-it-backup for a replacement. See the [badge rehearsal instructions](../../services/incident-api/README.md#rehearse-a-badge-outage) for settings.
+- **Ali** · The API accepts the badge simulator's two signal kinds with the scoped badge producer identity. Configure the simulator's incident API URL and signal token, and share the internal badge-control token with the API through service configuration. The [Radar notes](https://github.com/lukeeskinner/Backstage/blob/61f7062/docs/radar/README.md) record Ali's separate Kubernetes drill.
+- **Verified** · make check and make check-api passed. The opt-in test_real_simulator_fails_over_after_human_acceptance passed against Ali's simulator at 61f7062 over local HTTP and confirmed all three PDF files existed. Local checkpoint tests covered restart, a retried reroute, and withheld closure until PDF proof matched.
+- **Open** · Point the deployed badge simulator and incident API at each other for the combined Kubernetes rehearsal. Ali's service diagnosis uses mock mode pending a Radar service token.
+- **Reviewed** · main at 2555f30, ali/badge-simulator at 6595659, ali/badge-k8s at 61f7062, and agent-board at ee392fa.

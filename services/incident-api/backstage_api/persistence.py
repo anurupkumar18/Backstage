@@ -8,6 +8,7 @@ from elasticsearch import ApiError as ElasticsearchError
 from elasticsearch import ConflictError, NotFoundError, TransportError
 from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags, get_current_span, set_span_in_context
 
+from .badges import BadgeRecovery
 from .engine import ApiError, Incident, IncidentStore, RoomEvidence, timestamp
 
 DOCUMENT_ID = "overflow-demo"
@@ -44,6 +45,7 @@ def incident_record(incident):
         "attempted_staff": sorted(incident.attempted_staff),
         "events": incident.events,
         "clear_samples": [[timestamp(at), signal_id] for at, signal_id in incident.clear_samples],
+        "badge": asdict(incident.badge) if incident.badge is not None else None,
     }
 
 
@@ -59,6 +61,8 @@ def restore_incident(record):
         fields[name] = parse_time(fields[name])
     fields["attempted_staff"] = set(fields["attempted_staff"])
     fields["clear_samples"] = [(parse_time(at), signal_id) for at, signal_id in fields["clear_samples"]]
+    if fields.get("badge") is not None:
+        fields["badge"] = BadgeRecovery(**fields["badge"])
     return Incident(**fields, trace_context=set_span_in_context(NonRecordingSpan(span)))
 
 

@@ -15,6 +15,7 @@ SIGNAL = Draft202012Validator(
 )
 OPENAPI = yaml.safe_load((CONTRACTS / "openapi.yaml").read_text(encoding="utf-8"))
 ACTION = Draft202012Validator(OPENAPI["components"]["schemas"]["Action"])
+BADGE_SCHEMA = json.loads((CONTRACTS / "badge.v1.schema.json").read_text(encoding="utf-8"))
 
 
 def validate_signal(body):

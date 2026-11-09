@@ -1,0 +1,53 @@
+# Dash0 check rules for the high-priority SLO, in the Prometheus Operator format Dash0 documents.
+# Synced only when the Dash0 operator runs and a Dash0Monitoring resource exists in the same namespace.
+# Alternative without the operator: dash0 check-rules create -f <rule file> --dataset <id> (file format unverified).
+# Metrics are emitted by incident-api; see metrics.md for the contract.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: backstage-incident-slo
+spec:
+  groups:
+    - name: backstage-incident-slo
+      interval: 1m
+      rules:
+        - alert: HighPriorityJointSLOBelowTarget
+          expr: >-
+            100 * sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="joint", slo_outcome="met"}[1h]))
+            / sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="joint"}[1h]))
+            < $__threshold
+          for: 1m
+          annotations:
+            summary: High-priority incidents acknowledged within 60 s and resolved within 5 min fell below target.
+            description: Joint success over the last hour. Overdue incomplete incidents count as misses.
+            dash0-threshold-degraded: "95"
+            dash0-threshold-critical: "90"
+          labels:
+            service: incident-api
+            severity: page
+        - alert: HighPriorityAckSLOBelowTarget
+          expr: >-
+            100 * sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="ack_60s", slo_outcome="met"}[1h]))
+            / sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="ack_60s"}[1h]))
+            < $__threshold
+          for: 1m
+          annotations:
+            summary: High-priority human acknowledgement within 60 s fell below target.
+            dash0-threshold-degraded: "95"
+            dash0-threshold-critical: "90"
+          labels:
+            service: incident-api
+            severity: page
+        - alert: HighPriorityResolveSLOBelowTarget
+          expr: >-
+            100 * sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="resolve_300s", slo_outcome="met"}[1h]))
+            / sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="resolve_300s"}[1h]))
+            < $__threshold
+          for: 1m
+          annotations:
+            summary: High-priority verified resolution within 5 min fell below target.
+            dash0-threshold-degraded: "95"
+            dash0-threshold-critical: "90"
+          labels:
+            service: incident-api
+            severity: page

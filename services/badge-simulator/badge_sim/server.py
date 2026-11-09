@@ -84,9 +84,9 @@ class BadgeApp:
         for station in self.stations.values():
             station.stop()
         self.store.reset()
+        self.outbox.reset()
         for station in self.stations.values():
-            station._peer_state.clear()
-            station.start()
+            station.start()  # start() also begins a new run of signal IDs
 
     def state(self):
         now = self.clock()
@@ -264,9 +264,12 @@ def make_handler(app):
                 raise ApiError(401, "unauthorized", "invalid service credential")
 
         def _body(self, allow_empty=False):
-            length = int(self.headers.get("Content-Length") or 0)
-            if length > 64 * 1024:
-                raise ApiError(422, "invalid_payload", "body too large")
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                raise ApiError(422, "invalid_payload", "Content-Length must be an integer") from None
+            if length < 0 or length > 64 * 1024:
+                raise ApiError(422, "invalid_payload", "Content-Length must be between 0 and 65536")
             raw = self.rfile.read(length) if length else b""
             if not raw and allow_empty:
                 return None

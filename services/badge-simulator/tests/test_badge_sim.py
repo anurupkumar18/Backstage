@@ -1,12 +1,14 @@
+import http.client
 import io
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
 from badge_sim import SEED_JOB_IDS
 from badge_sim.config import Settings
-from badge_sim.server import ApiError, BadgeApp
+from badge_sim.server import ApiError, BadgeApp, serve
 from badge_sim.signals import SignalOutbox, completion_signal, health_signal
 from badge_sim.smoke import run as run_smoke
 from badge_sim.station import Station
@@ -86,10 +88,56 @@ class StationTests(unittest.TestCase):
             self.assertEqual((last["data"]["station_id"], last["data"]["status"]), ("station-a", "healthy"))
             self.assertEqual(len({x["signal_id"] for x in outbox.recorded}), len(outbox.recorded))
 
-    def test_completion_signal_id_is_stable_per_job(self):
-        a = completion_signal("station-a", "room-c", "badge-job-001", "pdf-badge-job-001", 1)
-        b = completion_signal("station-b", "room-c", "badge-job-001", "pdf-badge-job-001", 2)
-        self.assertEqual(a["signal_id"], b["signal_id"])
+    def test_completion_signal_id_is_stable_per_job_run(self):
+        a = completion_signal("station-a", "room-c", "badge-job-001", "r1", "pdf-badge-job-001", 1)
+        b = completion_signal("station-b", "room-c", "badge-job-001", "r1", "pdf-badge-job-001", 2)
+        c = completion_signal("station-b", "room-c", "badge-job-001", "r2", "pdf-badge-job-001", 3)
+        self.assertEqual(a["signal_id"], b["signal_id"])  # failover reuses the ID
+        self.assertNotEqual(a["signal_id"], c["signal_id"])  # a re-seeded job does not
+
+    def test_restarted_station_uses_new_health_ids(self):
+        clock = Clock()
+        store = MemoryStore(clock)
+        outbox = SignalOutbox()
+        with tempfile.TemporaryDirectory() as tmp:
+            b = Station("station-b", settings(), store, ArtifactStore(tmp), outbox, clock)
+            store.put_job("badge-job-001", "station-a")
+            b.tick()
+            first = outbox.recorded[-1]["signal_id"]
+            b.reset_state()
+            b.tick()
+            self.assertNotEqual(outbox.recorded[-1]["signal_id"], first)
+
+
+class RehearsalResetTests(unittest.TestCase):
+    """Gitar review on PR #2: a second rehearsal after /admin/reset must still deliver signals."""
+
+    def test_signals_flow_again_after_reset(self):
+        clock = Clock()
+        with tempfile.TemporaryDirectory() as tmp:
+            app = BadgeApp(settings(artifact_dir=tmp), clock=clock)
+            ids = []
+            for _ in range(2):
+                a, b = app.stations["station-a"], app.stations["station-b"]
+                app.seed("station-a")
+                b.tick()  # A never heartbeated: B reports it offline
+                app.store.reassign(SEED_JOB_IDS, "station-a", "station-b")
+                b.tick()  # B prints all three and emits completions
+                run = {s["signal_id"] for s in app.outbox.recorded}
+                self.assertEqual(len([s for s in app.outbox.recorded if s["kind"] == "badge_job_complete"]), 3)
+                self.assertTrue(any(s["kind"] == "badge_health" for s in app.outbox.recorded))
+                ids.append(run)
+                app.store.reset()
+                app.outbox.reset()
+                a.reset_state()
+                b.reset_state()
+            self.assertFalse(ids[0] & ids[1], "a second rehearsal must not reuse signal IDs")
+
+    def test_reset_clears_the_outbox(self):
+        outbox = SignalOutbox()
+        outbox.emit(completion_signal("station-b", "room-c", "badge-job-001", "r1", "pdf-badge-job-001", 0))
+        outbox.reset()
+        self.assertEqual((outbox.recorded, outbox.pending_count()), ([], 0))
 
 
 class AppTests(unittest.TestCase):
@@ -200,6 +248,15 @@ class RadarTests(unittest.TestCase):
         self.assertEqual(headers.get("Mcp-session-id"), "s-1")
         self.assertEqual(headers.get("Authorization"), "Bearer rt")
 
+    def test_same_second_diagnoses_get_distinct_evidence(self):
+        diagnoser = self.make(FakeRadar())
+        first = diagnoser.diagnose("inc-1", "station-a")["evidence_refs"]
+        second = diagnoser.diagnose("inc-2", "station-a")["evidence_refs"]
+        self.assertFalse(set(first) & set(second))
+        for ref in first:
+            record = json.loads((Path(self.tmp.name) / f"{ref}.json").read_text())
+            self.assertEqual(record["incident_id"], "inc-1")
+
     def test_radar_failure_falls_back_to_labeled_mock(self):
         result = self.make(FakeRadar(fail=True)).diagnose("inc-1", "station-a")
         self.assertEqual(result["mode"], "mock")
@@ -211,6 +268,39 @@ class RadarTests(unittest.TestCase):
         for tool in ("manage_workload", "apply_resource", "delete_resource", "patch_resource"):
             with self.assertRaises(McpError):
                 client.call_tool(tool, {})
+
+
+class ContentLengthTests(unittest.TestCase):
+    """Gitar review on PR #2: bad Content-Length must be a 422, never a hang or a 500."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.app = BadgeApp(settings(artifact_dir=self.tmp.name))
+        self.server = serve(self.app, "127.0.0.1", 0)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.addCleanup(self.server.server_close)
+        self.addCleanup(self.server.shutdown)
+
+    def post(self, length):
+        conn = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+        conn.putrequest("POST", "/internal/radar/diagnose")
+        conn.putheader("Authorization", "Bearer t")
+        conn.putheader("Content-Length", length)
+        conn.endheaders()
+        response = conn.getresponse()
+        body = json.loads(response.read())
+        conn.close()
+        return response.status, body["error"]["code"]
+
+    def test_negative_length_is_rejected(self):
+        self.assertEqual(self.post("-1"), (422, "invalid_payload"))
+
+    def test_non_numeric_length_is_rejected(self):
+        self.assertEqual(self.post("abc"), (422, "invalid_payload"))
+
+    def test_oversized_length_is_rejected(self):
+        self.assertEqual(self.post(str(10**6)), (422, "invalid_payload"))
 
 
 class SmokeTest(unittest.TestCase):
@@ -225,8 +315,12 @@ class ContractTests(unittest.TestCase):
         check = validators()
         if check is None:
             self.skipTest("jsonschema not installed")
-        check["signal"].validate(health_signal("station-b", "room-c", "station-a", "offline", 90, SEED_JOB_IDS, 1, 0))
-        check["signal"].validate(completion_signal("station-b", "room-c", "badge-job-001", "pdf-badge-job-001", 0))
+        check["signal"].validate(
+            health_signal("station-b", "room-c", "station-a", "offline", 90, SEED_JOB_IDS, "ab12cd34", 1, 0)
+        )
+        check["signal"].validate(
+            completion_signal("station-b", "room-c", "badge-job-001", "ab12cd34", "pdf-badge-job-001", 0)
+        )
 
 
 if __name__ == "__main__":

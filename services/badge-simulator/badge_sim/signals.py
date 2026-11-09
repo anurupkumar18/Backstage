@@ -22,10 +22,12 @@ def utc_iso(epoch):
     return datetime.fromtimestamp(epoch, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def health_signal(source_id, room_id, station_id, status, oldest_age_s, pending_job_ids, seq, now):
+def health_signal(source_id, room_id, station_id, status, oldest_age_s, pending_job_ids, run_id, seq, now):
+    # run_id changes on every station start and reset, so a fresh outage never
+    # reuses an ID the incident API already deduplicated.
     return {
         "schema_version": 1,
-        "signal_id": f"{source_id}-badge_health-{station_id}-{seq:04d}",
+        "signal_id": f"{source_id}-badge_health-{station_id}-{run_id}-{seq:04d}",
         "kind": "badge_health",
         "source_id": source_id,
         "room_id": room_id,
@@ -39,11 +41,12 @@ def health_signal(source_id, room_id, station_id, status, oldest_age_s, pending_
     }
 
 
-def completion_signal(station_id, room_id, job_id, pdf_ref, now):
-    # One signal ID per logical job: a retry after failover reuses it.
+def completion_signal(station_id, room_id, job_id, run_id, pdf_ref, now):
+    # One signal ID per logical job run: retries and failover reuse it, while
+    # re-seeding the same job ID after a reset gets a new run_id.
     return {
         "schema_version": 1,
-        "signal_id": f"badge_job_complete-{job_id}",
+        "signal_id": f"badge_job_complete-{job_id}-{run_id}",
         "kind": "badge_job_complete",
         "source_id": station_id,
         "room_id": room_id,
@@ -74,6 +77,14 @@ class SignalOutbox:
                 return
             self._pending[sid] = (signal, tracing.inject({}))
             self._lock.notify()
+
+    def reset(self):
+        """Forget every signal, including undelivered ones (rehearsal reset only)."""
+        with self._lock:
+            self._pending.clear()
+            self.delivered.clear()
+            self.rejected.clear()
+            self.recorded.clear()
 
     def pending_count(self):
         with self._lock:

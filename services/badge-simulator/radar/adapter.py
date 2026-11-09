@@ -15,6 +15,7 @@ import json
 import logging
 import re
 import time
+import uuid
 from pathlib import Path
 
 from .mcp_client import McpClient, McpError, result_text
@@ -93,7 +94,8 @@ class RadarDiagnoser:
 
     def _save(self, incident_id, station_id, tool, result):
         stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(self.clock()))
-        ref = f"radar-{station_id}-{tool}-{stamp}"[:128]
+        # The random suffix keeps two diagnoses in the same second from overwriting each other.
+        ref = f"radar-{station_id}-{tool}-{stamp}-{uuid.uuid4().hex[:8]}"[-128:]
         record = {"incident_id": incident_id, "station_id": station_id, "tool": tool, "result": result}
         (self.evidence_dir / f"{ref}.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
         return ref

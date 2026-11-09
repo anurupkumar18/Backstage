@@ -6,6 +6,7 @@ the same methods against a simulator-owned Elasticsearch index.
 
 import copy
 import threading
+import uuid
 from pathlib import Path
 
 
@@ -39,6 +40,8 @@ class MemoryStore:
                     "status": "pending",
                     "pdf_ref": None,
                     "created_at": self._clock(),
+                    # Scopes the completion signal ID to this run of the logical job.
+                    "run_id": uuid.uuid4().hex[:8],
                 }
             return copy.deepcopy(self._jobs[job_id])
 

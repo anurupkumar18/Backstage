@@ -203,3 +203,5 @@
 - **Branch or PR** · `kunj/hosted-vision`, PR25 Gitar follow-up.
 - **Change** · Gitar identified that all gateway clients share a remote IP and the detector used the telemetry bucket. Added a separate vision_detect zone keyed by Authorization at4r/s with burst4, preserving the independent telemetry limit. Unauthenticated callers still fail the auth_request gate; bearer values never enter access logs. No untrusted X-Forwarded-For trust was added.
 - **Verified** · nginx configuration/auth tests run against real Linux YOLO, and CI scaffold/changed-paths were green on the previous head. Final pin/rollout evidence follows. Public HTTPS backend change was explicitly approved by the user; original route and Deployment saved for rollback. No credential fields were altered by this patch.
+
+- Release pin: c43885a9a3d72fecc67fc0a80413bae1226cc532. Actual nginx smoke returned200 with10 real person boxes immediately after25 telemetry POSTs, verifying separate budgets. Source remains published before cluster download.

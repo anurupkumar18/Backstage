@@ -135,6 +135,7 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(data["PYTHONPATH"], "/opt/badge/src")
         self.assertEqual(data["BADGE_CONTROL_URL"], "http://badge-control:8090")
         self.assertEqual(data["KUBE_NAMESPACE"], "team-backstage")
+        self.assertEqual(data["INCIDENT_API_BASE_URL"], "http://incident-api:8000/api/v1")
         for key in data:
             self.assertNotRegex(key, "TOKEN|KEY|SECRET", f"{key} belongs in badge-secrets")
 
@@ -150,12 +151,20 @@ class ManifestTests(unittest.TestCase):
         overlay = yaml.safe_load((PLATFORM / "kustomization.yaml").read_text(encoding="utf-8"))
         self.assertEqual(overlay["namespace"], "team-backstage")
         self.assertIn("../badge", overlay["resources"])
+        self.assertIn("../incident", overlay["resources"])
+        for resource in overlay["resources"]:
+            self.assertTrue((PLATFORM / resource / "kustomization.yaml").is_file(), resource)
 
-    def test_drill_job_parses(self):
-        (job,) = [d for d in yaml.safe_load_all((BADGE / "drill-job.yaml").read_text(encoding="utf-8")) if d]
-        self.assertEqual(job["kind"], "Job")
-        script = job["spec"]["template"]["spec"]["containers"][0]["command"][-1]
-        compile(script, "drill", "exec")
+    def test_job_scripts_parse(self):
+        for name in ("drill-job.yaml", "incident-rehearsal-job.yaml"):
+            with self.subTest(job=name):
+                (job,) = [d for d in yaml.safe_load_all((BADGE / name).read_text(encoding="utf-8")) if d]
+                self.assertEqual(job["kind"], "Job")
+                spec = job["spec"]["template"]["spec"]
+                self.assertFalse(spec["automountServiceAccountToken"])
+                script = spec["containers"][0]["command"][-1]
+                compile(script, name, "exec")
+                self.assertNotRegex(script, r"print\([^)]*(TOKEN|tok\b|ORG\b)", "jobs must never print tokens")
 
 
 @unittest.skipIf(yaml is None, "PyYAML not installed")

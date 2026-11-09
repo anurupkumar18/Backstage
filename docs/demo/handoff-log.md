@@ -44,3 +44,12 @@
 - **Verified commands and results** · Node 22: original 71 Vitest tests pass after fixing three obsolete assertions; 3 new keyboard/join tests pass; TypeScript passes; presence server 8/8; production Vite build passes. Browser keyboard check-in reaches the confirmation and projector shows the incremented count and a same-origin QR. Homebrew Node 25 fails before startup with missing `libsimdjson.29.dylib`; use `/usr/local/bin/node` (22.18.0) until repaired.
 - **Open issues and next owner or action** · Phone inbox is next. Live API browser rehearsal, OpenAI server/client recovery and launcher remain pending. Edge lane is unassigned; camera files preserved in the original checkout.
 - **References and latest handoffs reviewed** · `origin/main@cfc4451`, web `7871ec1`, Luke cluster `478a3f4` and Luke log through deployment startup correction, Ali Kubernetes `408d198` and its log, `agent-board` inbox, Codex handoff and floor-agent plan. No open feature PRs at review time.
+
+## 2026-11-09 — Commit live tokens once after entry
+
+- **Branch or PR** · `kunj/phone-join`, PR #12 follow-up.
+- **Changes and why** · Gitar caught the live field remounting the board and fetching with each partial token. The field now keeps a draft and submits once with Enter or “Use token”; changing identity clears the draft. Scope state still resets when the committed token changes.
+- **Impact by lane** · No contract change. Live-demo instructions now require submitting the token.
+- **Verified commands and results** · Token-entry regression passes, frontend tests 75/75, TypeScript and production build pass on Node 22. Earlier presence tests 8/8 and keyboard join/projector checks remain valid.
+- **Open issues and next owner or action** · Personal inbox is in progress on `kunj/personal-inbox` and will pick up this commit.
+- **References and latest handoffs reviewed** · PR #12 Gitar inline review; base `main@cfc4451`, original recovery commit `090bb60`, lane handoffs already reviewed in the preceding entry.

@@ -47,3 +47,19 @@ To run the real Elasticsearch restart smoke test, first provision the empty back
     APP_MODE=live ELASTICSEARCH_INDEX_PREFIX=backstage-smoke BACKSTAGE_LIVE_SMOKE=1 make check-api
 
 This runs one synthetic Room B incident through closure and leaves the resulting record in the smoke index. Use an empty smoke index for each clean run.
+
+## Rehearse a badge outage
+
+Use the badge identities in the service's .env.example. If you already have a local .env, add demo-badge-source, demo-it-staff, and demo-it-backup to AUTH_TOKENS_JSON. Keep your existing values for Elasticsearch. Set BADGE_SERVICE_URL to the badge-control origin, normally http://127.0.0.1:8090 for a local rehearsal, and set BADGE_INTERNAL_TOKEN to the same value in both services. Give the simulator INCIDENT_API_BASE_URL=http://127.0.0.1:8000/api/v1 and BADGE_SIGNAL_TOKEN=demo-badge-source.
+
+1. Start the API and badge simulator. Follow [the simulator's rehearsal steps](../badge-simulator/README.md) to stop Station A and seed the jobs there.
+2. Wait for a Room C badge incident and its diagnosis. Approve the plan with demo-organizer, then accept with the assigned IT identity, usually demo-it-staff.
+3. The API calls badge-control to reroute the captured job IDs. Wait for the timeline to close the incident after all three completion signals match Station B's job and PDF records.
+
+Use the board or the documented v1 incident action endpoints for approval and acceptance. The API owns the reroute during this rehearsal. The badge-control token stays with the services. Badge evidence and the pending reroute are included in the Elasticsearch checkpoint in live mode.
+
+To run the integration test with a separate simulator checkout, install the API test requirements and run from this repository root:
+
+    BADGE_SMOKE_SOURCE=/path/to/ali-checkout/services/badge-simulator make check-api
+
+The test starts both APIs on temporary loopback ports and runs in mock storage mode.

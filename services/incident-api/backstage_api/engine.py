@@ -10,6 +10,8 @@ from uuid import uuid4
 from opentelemetry.context import Context
 from opentelemetry.trace import set_span_in_context
 
+from .badges import IT, BadgeRecovery, has_outage, observe_completion
+
 MAX_DOOR_GAP = timedelta(seconds=20)
 SEATING_MAX_AGE = timedelta(seconds=60)
 TRIGGER_DURATION = timedelta(seconds=30)
@@ -18,7 +20,10 @@ ACK_TIMEOUT = timedelta(seconds=60)
 
 SYSTEM = {"id": "incident-api", "kind": "system", "tier": None}
 VENUE = {"id": "venue-worker", "kind": "agent", "tier": 2}
-ROSTER = (("venue-staff-01", 10), ("venue-staff-02", 20))
+ROSTERS = {
+    "venue": (("venue-staff-01", 10), ("venue-staff-02", 20)),
+    "it": (("it-staff-01", 10), ("it-staff-02", 20)),
+}
 TRANSITIONS = {
     "raise": ({None}, "detected"),
     "claim": ({"detected"}, "triaged"),
@@ -52,11 +57,12 @@ class Identity:
     session_ids: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
     room_ids: tuple[str, ...] = ()
+    signal_kinds: tuple[str, ...] = ("zone_count",)
 
     def can_read(self, incident):
         return (
             self.tier == 3
-            or (self.tier == 2 and self.domain == "venue")
+            or (self.tier == 2 and self.domain == incident.domain)
             or (self.tier == 1 and incident.session_id in self.session_ids)
         )
 
@@ -118,12 +124,26 @@ class Incident:
     attempted_staff: set = field(default_factory=set)
     events: list = field(default_factory=list)
     clear_samples: list = field(default_factory=list)
+    badge: BadgeRecovery | None = None
+
+    @property
+    def kind(self):
+        return "badge_stall" if self.badge is not None else "overflow"
+
+    @property
+    def domain(self):
+        return "it" if self.badge is not None else "venue"
+
+    @property
+    def key(self):
+        # Keep the persisted overflow key readable by older checkpoints.
+        return f"badge_stall:{self.room_id}" if self.badge is not None else self.room_id
 
     def allowed_actions(self, actor):
         if self.state == "plan_proposed" and actor.tier == 3:
             return ["approve"]
         assigned = self.assignment is not None and actor.id == self.assignment["assignee_id"]
-        staff = actor.tier == 2 and actor.domain == "venue" and assigned
+        staff = actor.tier == 2 and actor.domain == self.domain and assigned
         if self.state == "dispatched" and staff:
             return ["ack", "handoff"]
         if self.state in {"dispatched", "accepted"} and (actor.tier == 3 or staff):
@@ -131,21 +151,27 @@ class Incident:
         return []
 
     def view(self, actor):
+        badge = self.badge is not None
+        resolved = self.state == "resolved"
+        verified = (
+            "Station B completed all affected jobs and confirmed their PDF references."
+            if badge else "Door counts stayed below threshold for 60 seconds."
+        )
         return {
             "id": self.id,
-            "type": "overflow",
+            "type": self.kind,
             "room_id": self.room_id,
             "session_id": self.session_id,
             "priority": "high",
             "state": self.state,
             "version": len(self.events),
             "updated_at": timestamp(self.updated_at),
-            "summary": f"{self.room_id.replace('-', ' ').title()} overflow",
+            "summary": "Station A badge queue stalled" if badge else f"{self.room_id.replace('-', ' ').title()} overflow",
             "plan": self.plan,
             "assignment": self.assignment,
             "verification": {
-                "status": "passed" if self.state == "resolved" else "pending",
-                "summary": "Door counts stayed below threshold for 60 seconds." if self.state == "resolved" else None,
+                "status": "passed" if resolved else "pending",
+                "summary": verified if resolved else None,
             },
             "allowed_actions": self.allowed_actions(actor),
             "trace_id": self.trace_id,
@@ -205,9 +231,18 @@ class IncidentStore:
             return self.signal_receipt(signal_id, incident_id, deduplicated=True)
 
         at = datetime.fromisoformat(signal["occurred_at"])
-        if not timedelta(0) <= now - at <= MAX_DOOR_GAP:
+        age = now - at
+        count = signal["kind"] == "zone_count"
+        if age < timedelta(0) or (count and age > MAX_DOOR_GAP):
             raise ApiError(422, "invalid_payload", "Signal time must be current and cannot be in the future.")
 
+        incident = self.ingest_count(signal, at, now) if count else self.ingest_badge(signal, at, now)
+        incident_id = incident.id if incident is not None else None
+        self.signals[signal_id] = (signal, now, incident_id)
+        self.mutation_count += 1
+        return self.signal_receipt(signal_id, incident_id, deduplicated=False)
+
+    def ingest_count(self, signal, at, now):
         room_id = signal["room_id"]
         room = self.room_evidence.setdefault(room_id, RoomEvidence())
         incident = self.active.get(room_id)
@@ -220,18 +255,31 @@ class IncidentStore:
             if incident is not None and incident.state in {"accepted", "verifying"}:
                 self.observe_recovery(incident, signal, at, now)
 
-        incident_id = incident.id if incident is not None else None
-        self.signals[signal_id] = (signal, now, incident_id)
-        self.mutation_count += 1
-        return self.signal_receipt(signal_id, incident_id, deduplicated=False)
+        return incident
+
+    def ingest_badge(self, signal, at, now):
+        incident = self.active.get(f"badge_stall:{signal['room_id']}")
+        if incident is None and has_outage(signal, now - at):
+            if any(
+                past.badge is not None and past.room_id == signal["room_id"] and past.state == "resolved"
+                and at <= past.updated_at.replace(microsecond=0)
+                for past in self.incidents.values()
+            ):
+                return None
+            badge = BadgeRecovery(list(signal["data"]["pending_job_ids"]))
+            return self.open_incident(signal, now, badge=badge)
+        if incident is not None:
+            observe_completion(incident, signal, at)
+        return incident
 
     @staticmethod
     def signal_receipt(signal_id, incident_id, *, deduplicated):
         return {"signal_id": signal_id, "incident_id": incident_id, "deduplicated": deduplicated}
 
-    def open_incident(self, signal, now):
+    def open_incident(self, signal, now, *, badge=None):
         room_id = signal["room_id"]
-        incident_id = f"inc-overflow-{uuid4().hex}"
+        kind = "badge-stall" if badge is not None else "overflow"
+        incident_id = f"inc-{kind}-{uuid4().hex}"
         room_label = room_id.replace("-", " ").title()
         with self.tracer.start_as_current_span("incident.raise", attributes={"incident.id": incident_id}) as span:
             incident = Incident(
@@ -240,15 +288,18 @@ class IncidentStore:
                 session_id=signal.get("session_id"),
                 trace_id=f"{span.get_span_context().trace_id:032x}",
                 trace_context=set_span_in_context(span),
+                badge=badge,
             )
             self.transition(incident, "raise", SYSTEM, {"signal_id": signal["signal_id"]}, now)
-            self.transition(incident, "claim", VENUE, {"domain": "venue"}, now)
-            incident.plan = {
-                "id": f"plan-{incident_id}-1",
-                "summary": f"Send venue staff to {room_label} and hold entry until the door queue clears.",
-            }
-            self.transition(incident, "propose", VENUE, {"plan_id": incident.plan["id"]}, now)
-        self.incidents[incident.id] = self.active[room_id] = incident
+            worker = IT if badge is not None else VENUE
+            self.transition(incident, "claim", worker, {"domain": incident.domain}, now)
+            if badge is None:
+                incident.plan = {
+                    "id": f"plan-{incident_id}-1",
+                    "summary": f"Send venue staff to {room_label} and hold entry until the door queue clears.",
+                }
+                self.transition(incident, "propose", VENUE, {"plan_id": incident.plan["id"]}, now)
+        self.incidents[incident.id] = self.active[incident.key] = incident
         return incident
 
     def observe_recovery(self, incident, signal, at, now):
@@ -265,9 +316,11 @@ class IncidentStore:
             return
         samples.append((at, signal["signal_id"]))
         if at - samples[0][0] >= CLEAR_DURATION:
-            evidence = {"evidence_signal_ids": [signal_id for _, signal_id in samples]}
-            self.transition(incident, "close", SYSTEM, evidence, now)
-            del self.active[incident.room_id]
+            self.close(incident, [signal_id for _, signal_id in samples], now)
+
+    def close(self, incident, signal_ids, now):
+        self.transition(incident, "close", SYSTEM, {"evidence_signal_ids": signal_ids}, now)
+        del self.active[incident.key]
 
     def dispatch(self, incident, now):
         loads = Counter(
@@ -275,16 +328,17 @@ class IncidentStore:
         )
         candidates = [
             (distance, loads[staff_id], staff_id)
-            for staff_id, distance in ROSTER
+            for staff_id, distance in ROSTERS[incident.domain]
             if staff_id not in incident.attempted_staff
         ]
         if not candidates:
-            self.transition(incident, "escalate", SYSTEM, {"reason": "No eligible venue staff remain."}, now)
+            self.transition(incident, "escalate", SYSTEM, {"reason": f"No eligible {incident.domain} staff remain."}, now)
             return
         _, _, staff_id = min(candidates)
         assignment_id = f"assignment-{incident.id}-{len(incident.attempted_staff) + 1}"
-        self.transition(incident, "dispatch", VENUE, {"assignment_id": assignment_id}, now)
-        incident.assignment = {"id": assignment_id, "assignee_id": staff_id, "domain": "venue"}
+        worker = IT if incident.badge is not None else VENUE
+        self.transition(incident, "dispatch", worker, {"assignment_id": assignment_id}, now)
+        incident.assignment = {"id": assignment_id, "assignee_id": staff_id, "domain": incident.domain}
         incident.attempted_staff.add(staff_id)
         incident.ack_deadline = now + ACK_TIMEOUT
 
@@ -352,4 +406,6 @@ class IncidentStore:
         self.action_receipts[scope] = (body, result)
         if incident.state == "approved":
             self.dispatch(incident, now)
+        elif incident.state == "accepted" and incident.badge is not None:
+            self.transition(incident, "verify", SYSTEM, {"evidence_signal_ids": []}, now)
         return deepcopy(result)

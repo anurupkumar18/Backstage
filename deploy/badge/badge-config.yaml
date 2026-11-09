@@ -19,8 +19,9 @@ data:
   # Token-protected seed/reset/state routes for the seeded badge scenario (rehearsal controls).
   BADGE_ADMIN_ENABLED: "true"
   KUBE_NAMESPACE: team-backstage
-  # Empty until Luke's incident API is deployed; signals are then recorded only.
-  INCIDENT_API_BASE_URL: ""
+  # Luke's incident API (deploy/incident). Stations post badge_health and
+  # badge_job_complete here with BADGE_SIGNAL_TOKEN from badge-secrets.
+  INCIDENT_API_BASE_URL: http://incident-api:8000/api/v1
   RADAR_MODE: mock
   RADAR_MCP_URL: https://api.radarhq.io/mcp
   RADAR_CLUSTER_ID: Wa7aYihloY4

@@ -1,9 +1,12 @@
 # Aggregate overlay for the team-backstage namespace on cluster "backstage".
 # The namespace already exists (provisioned by the event), so it is not created here.
-# Add each lane's directory once it has a kustomization.yaml:
-#   ../incident  (Luke)   ../web, ../dash0  (Kunj)
+# Secrets are created out of band and never committed: badge-secrets (deploy/badge)
+# and incident-secrets (deploy/incident). Both must exist before applying.
+# Still to add once their prerequisites exist (see docs/radar/handoff-log.md):
+#   ../dash0 (needs the dash0-credentials Secret), then ../web (needs otel-collector and incident-api)
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: team-backstage
 resources:
   - ../badge
+  - ../incident

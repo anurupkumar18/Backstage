@@ -2,7 +2,9 @@
 
 Badge station and badge-control manifests for namespace `team-backstage` on cluster `backstage` (Radar id `Wa7aYihloY4`). Owner: Ali.
 
-**Status (2026-11-09):** deployed and drilled on the cluster. See [docs/radar](../../docs/radar/README.md) for the evidence.
+**Status (2026-11-09):** deployed and connected to Luke's `incident-api` (`INCIDENT_API_BASE_URL` in `badge-config`). The approval-gated rehearsal (`incident-rehearsal-job.yaml`) passed on the cluster: Station A stopped, an organizer approved, IT accepted, and the API rerouted and closed the incident with three completion evidence IDs. See [the lane log](../../docs/radar/handoff-log.md) and [docs/radar](../../docs/radar/README.md) for the evidence.
+
+Use `incident-rehearsal-job.yaml` for the demo flow. `drill-job.yaml` calls reroute itself and bypasses the API's approval gates, so keep it for testing the badge services alone.
 
 | Object | Role |
 | --- | --- |

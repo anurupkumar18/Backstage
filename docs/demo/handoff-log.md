@@ -177,3 +177,10 @@
 - **Verified commands and results** · Final merged TypeScript and Docker production build pass;146 frontend tests,30 Node server tests and4 Python preview tests pass. Merged Docker smoke: video Range206,120 sample annotations and provenance available, nginx valid, private OpenAI/reset404 and undeployed camera503. Site browser fresh-load and live inference work after restarting the private preview;30-second clip metadata verified exactly720p30/30.000 seconds. No paid calls or cluster mutations.
 - **Impact and remaining dependencies** · Preview stays at 127.0.0.1:5207/#/demo with the loopback detector on8766. Node voice/presence service is local8787 with OpenAI key missing, so voice is visible but unavailable until a server key is supplied. Physical webcam was not exercised. Ali deploy-web7aaa1f6 still needs the final merged source pin; a hosted live detector remains separate from the static recorded mode.
 - **References reviewed** · main d94aa9c, contract revision aec8576ba4aae08a9344b5d867d2db79d9f06863, Anurup final delivery log and Ali deploy-web7aaa1f6. No source changes in foreign lanes beyond the upstream merge.
+
+## 2026-11-09 — Blob presence and pixel-font UI pass
+
+- **Branch or PR** · `kunj/blobs-fun-ui` off origin/main 395ed2b.
+- **Changes and why** · Presence people are drawn as wobbling jelly blobs with blinking eyes instead of circles (apps/web/src/ui/PresenceField.tsx); caption and join copy say blob. Departure Mono (OFL, apps/web/public/fonts) is used for tier, state and card-meta labels, and incident cards lift on hover with a reduced-motion guard.
+- **Verified commands and results** · 133 frontend tests pass; typecheck clean apart from missing @dash0/sdk-web in a borrowed node_modules, which also fails 4 test files and the Vite build on untouched origin/main. Not verified in a browser. Live OpenAI calls not run: no key in this shell, and the server tests mock fetch.
+- **Open issues and next owner or action** · Eyeball the blobs at projector size; board filter tabs and a resolve celebration were not built.

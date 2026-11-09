@@ -215,6 +215,57 @@ function easeOutBack(t: number): number {
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
+const BLOB_POINTS = 9;
+const EYE_MIN_RADIUS = 5;
+
+/** Closed smooth path: radius wobbles per point, so each blob has its own jelly outline. */
+function traceBlob(ctx: CanvasRenderingContext2D, blob: Blob, r: number, now: number, still: boolean, squash: number) {
+  const pts: Array<[number, number]> = [];
+  for (let i = 0; i < BLOB_POINTS; i += 1) {
+    const angle = (i / BLOB_POINTS) * Math.PI * 2;
+    const base = 0.9 + ((blob.seedA * 7 + i * 1.7) % 1) * 0.12;
+    const wobble = still ? 0 : Math.sin(now * 0.0014 + i * 1.9 + blob.seedB * 6.28) * 0.07;
+    const rad = r * (base + wobble);
+    pts.push([blob.x + Math.cos(angle) * rad * (1 + squash), blob.y + Math.sin(angle) * rad * (1 - squash)]);
+  }
+  ctx.beginPath();
+  for (let i = 0; i < BLOB_POINTS; i += 1) {
+    const a = pts[i];
+    const b = pts[(i + 1) % BLOB_POINTS];
+    if (!a || !b) continue;
+    const mx = (a[0] + b[0]) / 2;
+    const my = (a[1] + b[1]) / 2;
+    if (i === 0) ctx.moveTo(mx, my);
+    const next = pts[(i + 1) % BLOB_POINTS];
+    const after = pts[(i + 2) % BLOB_POINTS];
+    if (!next || !after) continue;
+    ctx.quadraticCurveTo(next[0], next[1], (next[0] + after[0]) / 2, (next[1] + after[1]) / 2);
+  }
+  ctx.closePath();
+}
+
+function drawEyes(ctx: CanvasRenderingContext2D, blob: Blob, r: number, now: number, still: boolean, dark: boolean) {
+  const blinkPhase = (now * 0.0004 + blob.seedB * 10) % 4;
+  const blinking = !still && blinkPhase > 3.92;
+  const gazeX = still ? 0 : Math.sin(now * 0.0008 + blob.seedA * 6.28) * r * 0.08;
+  const gazeY = still ? 0 : Math.cos(now * 0.0006 + blob.seedB * 6.28) * r * 0.05;
+  const eyeR = r * 0.2;
+  for (const side of [-1, 1]) {
+    const ex = blob.x + side * r * 0.3;
+    const ey = blob.y - r * 0.08;
+    ctx.fillStyle = dark ? "#f6f5f2" : "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, eyeR, blinking ? eyeR * 0.12 : eyeR, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (!blinking) {
+      ctx.fillStyle = "#15161a";
+      ctx.beginPath();
+      ctx.arc(ex + gazeX, ey + gazeY, eyeR * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 function draw(ctx: CanvasRenderingContext2D, field: Field, now: number, still: boolean) {
   ctx.setTransform(field.dpr, 0, 0, field.dpr, 0, 0);
   ctx.clearRect(0, 0, field.width, field.height);
@@ -233,21 +284,20 @@ function draw(ctx: CanvasRenderingContext2D, field: Field, now: number, still: b
       }
       const r = geometry.drawRadius * scale;
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-      const gradient = ctx.createRadialGradient(blob.x - r * 0.3, blob.y - r * 0.3, r * 0.1, blob.x, blob.y, r);
+      const squash = still ? 0 : Math.sin(now * 0.0021 + blob.seedA * 6.28) * 0.07;
+      traceBlob(ctx, blob, r, now, still, squash);
+      const gradient = ctx.createRadialGradient(blob.x - r * 0.3, blob.y - r * 0.35, r * 0.1, blob.x, blob.y, r * 1.1);
       gradient.addColorStop(0, "rgba(255,255,255,0.55)");
-      gradient.addColorStop(0.35, color);
+      gradient.addColorStop(0.4, color);
       gradient.addColorStop(1, color);
       ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(blob.x, blob.y, r, 0, Math.PI * 2);
       ctx.fill();
       if (tier === "speaker") {
         ctx.strokeStyle = field.ringColor;
         ctx.lineWidth = 1.25;
-        ctx.beginPath();
-        ctx.arc(blob.x, blob.y, r + 2.5, 0, Math.PI * 2);
         ctx.stroke();
       }
+      if (r >= EYE_MIN_RADIUS) drawEyes(ctx, blob, r, now, still, tier === "organizer");
     }
   }
 
@@ -295,7 +345,7 @@ export function PresenceField({ counts, variant, maxBlobs = 160, agentActivity }
 
     const motion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     let reduced = motion?.matches ?? false;
-    const field = createField(variant === "hero" ? 7 : 4);
+    const field = createField(variant === "hero" ? 9 : 5);
     fieldRef.current = field;
     let frame = 0;
 
@@ -420,7 +470,7 @@ export function PresenceField({ counts, variant, maxBlobs = 160, agentActivity }
           ))}
         </ul>
       </div>
-      {unit > 1 ? <p className="presence__caption">{`1 dot ≈ ${unit} people`}</p> : null}
+      {unit > 1 ? <p className="presence__caption">{`1 blob ≈ ${unit} people`}</p> : null}
     </section>
   );
 }

@@ -78,10 +78,10 @@ export function JoinPage({ onJoin, joinedTier }: JoinPageProps) {
               You're in.
             </h1>
             <p className="join__text">
-              Your dot is now in the {OPTIONS[joined].cluster} cluster on the floor display, as {OPTIONS[joined].label} (Tier{" "}
+              Your blob is now in the {OPTIONS[joined].cluster} cluster on the floor display, as {OPTIONS[joined].label} (Tier{" "}
               {OPTIONS[joined].tier}).
             </p>
-            <p className="join__text join__text--quiet">This only changes where your dot appears. It grants no permissions.</p>
+            <p className="join__text join__text--quiet">This only changes where your blob appears. It grants no permissions.</p>
             <button
               type="button"
               className="join__secondary"
@@ -101,7 +101,7 @@ export function JoinPage({ onJoin, joinedTier }: JoinPageProps) {
               How are you here today?
             </h1>
             <p id={introId} className="join__text">
-              Pick one. It only changes where your dot appears on the floor display. It grants no permissions.
+              Pick one. It only changes where your blob appears on the floor display. It grants no permissions.
             </p>
             <fieldset className="join__options" disabled={busy}>
               <legend className="sr-only">I'm here as</legend>

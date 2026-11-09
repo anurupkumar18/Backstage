@@ -61,9 +61,17 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
   const loadEvents = useCallback(
     async (incident: Incident, signal?: AbortSignal) => {
       fetchedVersion.current.set(incident.id, incident.version);
-      const result = await client.listEvents(incident.id, signal);
-      if (result.ok) {
-        setEventsById((current) => ({ ...current, [incident.id]: result.data.items }));
+      try {
+        const result = await client.listEvents(incident.id, signal);
+        if (signal?.aborted || fetchedVersion.current.get(incident.id) !== incident.version) return;
+        if (result.ok) {
+          setEventsById((current) => ({ ...current, [incident.id]: result.data.items }));
+        } else {
+          fetchedVersion.current.delete(incident.id);
+          setEventsById((current) => ({ ...current, [incident.id]: undefined }));
+        }
+      } catch {
+        if (fetchedVersion.current.get(incident.id) === incident.version) fetchedVersion.current.delete(incident.id);
       }
     },
     [client],
@@ -100,6 +108,11 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
         merge(result.data.items, signal);
       } else {
         setLoadError({ code: result.code, message: result.message });
+        if (result.status === 401 || result.status === 403 || result.status === 404) {
+          snapshot.current = null;
+          setIncidents([]);
+          setEventsById({});
+        }
       }
       setLoading(false);
     },

@@ -53,3 +53,21 @@
 - **Verified commands and results** · Token-entry regression passes, frontend tests 75/75, TypeScript and production build pass on Node 22. Earlier presence tests 8/8 and keyboard join/projector checks remain valid.
 - **Open issues and next owner or action** · Personal inbox is in progress on `kunj/personal-inbox` and will pick up this commit.
 - **References and latest handoffs reviewed** · PR #12 Gitar inline review; base `main@cfc4451`, original recovery commit `090bb60`, lane handoffs already reviewed in the preceding entry.
+
+## 2026-11-09 — Personal inbox, verified against the real API
+
+- **Branch or PR** · `kunj/personal-inbox`, stacked on `kunj/phone-join` / PR #12; retarget to main once #12 merges.
+- **Changes and why** · Added `#/me`, pure deterministic inbox derivation/copy, phone cards with one API-permitted approve/accept action, priority/recency ordering, verification text and “Why you”. Reuses useBoard and useIncidentActions. Attendees bypass incident reads; speakers receive a session-scope explanation. Marks updates read with a timestamp only and tolerates disabled storage. Role/token switches also clear the prior announcement. Added web agent_docs for these patterns.
+- **Impact by lane** · Contract unchanged at `8b902d2f715d1c068a1f4a10bfb3c850a37abf7a`. Timeline cancellations are handled, failed reads retry without a version bump, denied incident reads clear prior cards. No new backend or external vendor calls.
+- **Verified commands and results** · Node 22: TypeScript and production build pass; 91 Vitest tests pass, including keyboard approve, stale 409 requiring another human action, attendee read isolation, token submit and timeline retry; presence server 8/8 remains valid. `make check check-api` passes: 3 contract tests and 16 API tests (2 opt-in integration tests skipped). Used a fresh isolated Python environment because the original .venv lacked service dependencies. Real FastAPI on loopback: canonical 30-second trigger → organizer keyboard approval → staff keyboard acceptance → canonical 60-second clearing replay → inbox Verified and attendee public Normal. Speaker `demo-session` sees no overflow. Phone layout checked at 390 × 844. Local evidence incident `inc-overflow-52de33af3bd041b295cdbae6b9936303`; synthetic, in-memory storage only.
+- **Open issues and next owner or action** · Agent activity, floor brief, voice, installable shell and report intake are later phases. Report intake and live stage support still need Luke. Camera lane ownership is still unassigned.
+- **References and latest handoffs reviewed** · `main@cfc4451`; PR #12 recovery `090bb60` and Gitar token-entry fix `4d2d5c6`; Luke cluster `478a3f4`, Ali badge Kubernetes `408d198`, and lane logs referenced in the preceding entries. Local API README and replay script reviewed for the live rehearsal.
+
+## 2026-11-09 — Align the inbox branch with PR #12
+
+- **Branch or PR** · `kunj/personal-inbox`, merging `kunj/phone-join@4d2d5c6` as its base.
+- **Changes and why** · Preserved both appended handoffs while resolving the log-only merge conflict; aligned ancestry with the token-entry fix so the stacked PR diff contains the inbox only. Removed an extra fixture-helper EOF blank line.
+- **Impact by lane** · No runtime or contract change.
+- **Verified commands and results** · `git diff --check` passes; same code as the 91-test, TypeScript/build and live-browser verified inbox entry above.
+- **Open issues and next owner or action** · Merge PR #12 before the inbox and retarget the inbox to main.
+- **References and latest handoffs reviewed** · PR #12 `4d2d5c6`, inbox `5578951`; no new remote dependencies.

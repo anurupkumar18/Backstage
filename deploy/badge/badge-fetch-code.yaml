@@ -1,0 +1,41 @@
+# Each badge pod's init container runs fetch.py to download the badge
+# simulator code from GitHub at one pinned commit, keeping only the runtime
+# packages (badge_sim, radar). The main container runs that code on the stock
+# python:3.13-slim image, so no image build or registry is needed.
+#
+# To deploy new code: push it, set CODE_SHA to that commit, apply, then
+#   kubectl -n team-backstage rollout restart deploy/badge-control deploy/badge-station-a deploy/badge-station-b
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: badge-fetch-code
+  labels:
+    app.kubernetes.io/part-of: backstage
+    app.kubernetes.io/component: badge
+data:
+  CODE_REPO: lukeeskinner/Backstage
+  CODE_SHA: bed1fd37f38877ff82c7e2df6433ef3a15a19872
+  fetch.py: |
+    # Download the pinned commit and keep only the runtime packages.
+    import io, os, tarfile, urllib.request
+    repo, sha = os.environ["CODE_REPO"], os.environ["CODE_SHA"]
+    url = os.environ.get("CODE_URL") or f"https://codeload.github.com/{repo}/tar.gz/{sha}"
+    target_dir = os.environ.get("CODE_DIR", "/opt/badge/src")
+    data = urllib.request.urlopen(url, timeout=60).read()
+    prefix = "/services/badge-simulator/"
+    count = 0
+    with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+        for member in archive.getmembers():
+            if not member.isfile() or prefix not in member.name or not member.name.endswith(".py"):
+                continue
+            relative = member.name.split(prefix, 1)[1]
+            if relative.split("/")[0] not in ("badge_sim", "radar") or ".." in relative:
+                continue
+            target = os.path.join(target_dir, relative)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with open(target, "wb") as out:
+                out.write(archive.extractfile(member).read())
+            count += 1
+    if count < 10:
+        raise SystemExit(f"only {count} files extracted from {url}")
+    print(f"fetched {count} files from {repo}@{sha}")

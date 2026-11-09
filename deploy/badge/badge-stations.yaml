@@ -32,6 +32,27 @@ spec:
         runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: fetch-code
+          image: public.ecr.aws/docker/library/python:3.13-slim
+          command: ["python", "/opt/fetch/fetch.py"]
+          envFrom:
+            - configMapRef:
+                name: badge-fetch-code
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: fetch
+              mountPath: /opt/fetch
+              readOnly: true
+            - name: code
+              mountPath: /opt/badge/src
       containers:
         - name: station
           image: public.ecr.aws/docker/library/python:3.13-slim
@@ -67,14 +88,19 @@ spec:
               drop: ["ALL"]
           volumeMounts:
             - name: code
-              mountPath: /opt/badge
+              mountPath: /opt/badge/src
               readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: code
+        - name: fetch
           configMap:
-            name: badge-code
+            name: badge-fetch-code
+            items:
+              - key: fetch.py
+                path: fetch.py
+        - name: code
+          emptyDir: {}
         - name: tmp
           emptyDir: {}
 ---
@@ -109,6 +135,27 @@ spec:
         runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: fetch-code
+          image: public.ecr.aws/docker/library/python:3.13-slim
+          command: ["python", "/opt/fetch/fetch.py"]
+          envFrom:
+            - configMapRef:
+                name: badge-fetch-code
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: fetch
+              mountPath: /opt/fetch
+              readOnly: true
+            - name: code
+              mountPath: /opt/badge/src
       containers:
         - name: station
           image: public.ecr.aws/docker/library/python:3.13-slim
@@ -144,13 +191,18 @@ spec:
               drop: ["ALL"]
           volumeMounts:
             - name: code
-              mountPath: /opt/badge
+              mountPath: /opt/badge/src
               readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: code
+        - name: fetch
           configMap:
-            name: badge-code
+            name: badge-fetch-code
+            items:
+              - key: fetch.py
+                path: fetch.py
+        - name: code
+          emptyDir: {}
         - name: tmp
           emptyDir: {}

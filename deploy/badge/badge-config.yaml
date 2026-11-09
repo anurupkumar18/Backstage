@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: backstage
     app.kubernetes.io/component: badge
 data:
-  PYTHONPATH: /opt/badge/badge-sim.zip
+  PYTHONPATH: /opt/badge/src
   PYTHONDONTWRITEBYTECODE: "1"
   PYTHONUNBUFFERED: "1"
   BADGE_HOST: 0.0.0.0

@@ -23,6 +23,7 @@
         "apps/web/src/hooks/useBoard.ts", "apps/web/src/hooks/useBoard.test.tsx",
         "apps/web/src/hooks/useSessionTokens.ts", "apps/web/src/App.tsx",
         "apps/web/src/ui/BoardView.tsx", "apps/web/src/ui/ui.test.tsx",
+        "apps/web/src/ui/presence.test.tsx", "apps/web/src/mock/transport.ts",
         "apps/web/package.json", "apps/web/package-lock.json", "apps/web/vite.config.ts",
         "apps/web/.env.example", "apps/web/README.md",
         "docs/demo/incident-evidence-plan.md", "docs/demo/incident-evidence-qa.md",

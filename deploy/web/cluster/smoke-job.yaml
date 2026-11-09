@@ -35,13 +35,13 @@ spec:
               import tempfile
               from urllib.error import HTTPError
               from urllib.request import Request, urlopen
-              
+
               base = os.environ.get('WEB_BASE_URL', 'http://web').rstrip('/')
               identities = json.loads(os.environ['AUTH_TOKENS_JSON'])
               human = next(token for token, identity in identities.items() if identity.get('tier') == 3)
               producer = next(token for token, identity in identities.items() if 'tier' not in identity)
-              
-              
+
+
               def request(path, expected, token=None, body=None, headers=None):
                   outgoing = dict(headers or {})
                   if token:
@@ -56,8 +56,8 @@ spec:
                   if status != expected:
                       raise SystemExit('Unexpected HTTP status; response content suppressed.')
                   return data
-              
-              
+
+
               request('/healthz', 200)
               request('/', 200)
               request('/stage.html', 200)
@@ -92,7 +92,7 @@ spec:
               if os.environ.get('CHECK_VOICE') == '1':
                   result = json.loads(request('/openai/briefing/token', 200, human, b'{}', {'Content-Type': 'application/json'}))
                   assert isinstance(result.get('value'), str) and len(result['value']) > 0
-                  assert set(result['allowed_tools']) == {'get_status', 'list_incidents', 'get_incident'}
+                  assert set(result['allowed_tools']) == {'get_status', 'list_incidents', 'get_incident_events'}
                   print('OpenAI ephemeral briefing mint verified; credential discarded.', flush=True)
                   result.clear()
               print('HOSTED RELEASE SMOKE PASSED', flush=True)

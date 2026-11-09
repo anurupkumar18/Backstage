@@ -24,9 +24,7 @@ spec:
             - name: CODE_REPO
               value: lukeeskinner/Backstage
             - name: CODE_SHA
-              value: 395ed2bcc4358b56dde50589a45a7eec70ddd162
-            - name: HOME
-              value: /work/home
+              value: 3de777b3792e96e80050c55bd10cf1a5de25db69
             - name: npm_config_cache
               value: /work/npm-cache
             - name: VITE_API_BASE_URL
@@ -42,7 +40,7 @@ spec:
             - -ec
             - |
               case "$CODE_SHA" in *[!0-9a-f]*|"") echo "CODE_SHA must be a commit SHA"; exit 1;; esac
-              mkdir -p /work/src /work/home /nginx-conf/vision /runtime/camera
+              mkdir -p /work/src /nginx-conf/vision /runtime/camera
               wget -qO /work/src.tgz "https://codeload.github.com/$CODE_REPO/tar.gz/$CODE_SHA"
               tar -xzf /work/src.tgz -C /work/src --strip-components=1
               cd /work/src/apps/web

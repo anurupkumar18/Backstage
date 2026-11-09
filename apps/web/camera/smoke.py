@@ -62,7 +62,7 @@ for path in ('/_vision_authorize', '/presence/reset', '/openai/realtime/token', 
 if os.environ.get('CHECK_VOICE') == '1':
     result = json.loads(request('/openai/briefing/token', 200, human, b'{}', {'Content-Type': 'application/json'}))
     assert isinstance(result.get('value'), str) and len(result['value']) > 0
-    assert set(result['allowed_tools']) == {'get_status', 'list_incidents', 'get_incident'}
+    assert set(result['allowed_tools']) == {'get_status', 'list_incidents', 'get_incident_events'}
     print('OpenAI ephemeral briefing mint verified; credential discarded.', flush=True)
     result.clear()
 print('HOSTED RELEASE SMOKE PASSED', flush=True)

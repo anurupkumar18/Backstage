@@ -38,6 +38,7 @@ export default defineConfig({
         target: process.env.PRESENCE_PROXY_TARGET ?? "http://127.0.0.1:8787",
         changeOrigin: true,
       },
+      "/openai": { target: process.env.WEB_SERVER_PROXY_TARGET ?? "http://127.0.0.1:8787", changeOrigin: true, xfwd: true },
     },
   },
   test: {

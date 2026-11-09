@@ -79,11 +79,13 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
   const snapshot = useRef<Map<string, Incident> | null>(null);
   const openTimelines = useRef(new Set<string>());
   const fetchedVersion = useRef(new Map<string, number>());
+  const eventEpoch = useRef(0);
   const requestSeq = useRef(0);
   const appliedSeq = useRef(0);
 
   useEffect(() => {
     activeClient.current = client;
+    eventEpoch.current += 1;
     snapshot.current = null;
     openTimelines.current.clear();
     fetchedVersion.current.clear();
@@ -100,18 +102,24 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
 
   const loadEvents = useCallback(
     async (incident: Incident, signal?: AbortSignal) => {
+      const epoch = eventEpoch.current;
       const mine = (eventRequests.current.get(incident.id) ?? 0) + 1;
       eventRequests.current.set(incident.id, mine);
       let result;
       try {
         result = await client.listEvents(incident.id, signal);
-      } catch (error) {
-        if (signal?.aborted || activeClient.current !== client) return;
-        throw error;
+      } catch {
+        if (activeClient.current !== client || epoch !== eventEpoch.current || eventRequests.current.get(incident.id) !== mine) return;
+        fetchedVersion.current.delete(incident.id);
+        if (signal?.aborted) return;
+        setEventsById((current) => ({ ...current, [incident.id]: undefined }));
+        setEventErrorsById((current) => ({ ...current, [incident.id]: { code: "network", message: "Could not load the timeline. Try again." } }));
+        return;
       }
       if (
         signal?.aborted ||
         activeClient.current !== client ||
+        epoch !== eventEpoch.current ||
         eventRequests.current.get(incident.id) !== mine
       )
         return;
@@ -127,6 +135,8 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
           return next;
         });
       } else {
+        fetchedVersion.current.delete(incident.id);
+        setEventsById((current) => ({ ...current, [incident.id]: undefined }));
         setEventErrorsById((current) => ({
           ...current,
           [incident.id]: { code: result.code, message: result.message },
@@ -176,6 +186,15 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
         merge(result.data.items, signal);
       } else {
         setLoadError({ code: result.code, message: result.message });
+        if (result.status === 401 || result.status === 403 || result.status === 404) {
+          snapshot.current = null;
+          eventEpoch.current += 1;
+          fetchedVersion.current.clear();
+          eventRequests.current.clear();
+          setIncidents([]);
+          setEventsById({});
+          setEventErrorsById({});
+        }
       }
       setLoading(false);
     },

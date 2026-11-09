@@ -42,3 +42,18 @@ The SDK appends `/v1/traces` and `/v1/logs` to its endpoint. The browser therefo
 No provider token is configured in the browser. The collector supplies Dash0 credentials server-side. URL credentials, query strings and fragments are scrubbed, HTTP headers and page titles are not captured, and browser exceptions become a static message plus an allowlisted source (`window` or `promise`), without arbitrary error text or stack traces. No session replay, identification, interaction labels, profiling or console capture is enabled. SDK-generated anonymous session IDs still support RUM correlation. Configured monitoring and trace IDs do not prove provider ingestion; confirm traces and web events in Dash0 before making a cloud-delivery claim.
 
 Official SDK references: [configuration](https://www.dash0.com/docs/dash0/miscellaneous/tooling/web-sdk/configuration), [source](https://github.com/dash0hq/dash0-sdk-web). `src/telemetry/sdk-runtime.test.ts` exercises the installed SDK to verify API trace propagation and export, navigation logs, transport exclusion and URL scrubbing.
+
+
+## Personal inbox
+
+`#/me` shows approval and assignment cards from the current token’s incident list. The single primary action comes from `allowed_actions`, and the existing intent handler preserves idempotency and refreshes stale 409 responses. Recovery reads “Verified” only after both `state=resolved` and passed evidence. Attendees read `/status` without fetching incidents; speakers see only what their session-scoped token returns.
+
+In live mode, enter a token and press Enter or **Use token**. Token drafts do not restart polling. Role/token changes discard prior cards and announcements. **Mark updates read** stores only a timestamp per role in local storage; denied storage is supported.
+
+See [frontend integration patterns](agent_docs/frontend_patterns.md) before changing route, polling or permission behavior.
+
+## Floor brief and optional voice
+
+The inbox summarizes scoped events newer than the last successful visit and refreshes the brief after 60 seconds away. Only timestamps are persisted; denied/loading views do not mark history seen. Templates never change incident actions or invent verification.
+
+Voice is off by default. See [the local voice setup and boundary](../../docs/demo/openai.md) before enabling `VITE_ENABLE_VOICE=true`. `npm run presence` now serves the combined presence/OpenAI routes on loopback; existing `/presence` URLs are unchanged. Server tests run under `npm test` or `npm run test:server`. A standard OpenAI key is read only from the Node server environment.

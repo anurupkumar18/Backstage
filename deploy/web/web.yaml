@@ -15,6 +15,39 @@ spec:
         app.kubernetes.io/name: web
     spec:
       containers:
+        - name: web-runtime
+          image: backstage-web-runtime:dev
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: INCIDENT_API_BASE_URL
+              value: http://incident-api:8000/api/v1
+            # nginx is the only listener exposed by the Service; briefing verifies the caller's bearer.
+            - name: OPENAI_ALLOW_REMOTE
+              value: "1"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: web-openai
+                  key: OPENAI_API_KEY
+                  optional: true
+          readinessProbe:
+            exec:
+              command: [node, -e, "fetch('http://127.0.0.1:8787/presence/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+          livenessProbe:
+            exec:
+              command: [node, -e, "fetch('http://127.0.0.1:8787/presence/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
         - name: web
           image: backstage-web:dev
           imagePullPolicy: IfNotPresent

@@ -55,15 +55,17 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
   const snapshot = useRef<Map<string, Incident> | null>(null);
   const openTimelines = useRef(new Set<string>());
   const fetchedVersion = useRef(new Map<string, number>());
+  const eventEpoch = useRef(0);
   const requestSeq = useRef(0);
   const appliedSeq = useRef(0);
 
   const loadEvents = useCallback(
     async (incident: Incident, signal?: AbortSignal) => {
+      const epoch = eventEpoch.current;
       fetchedVersion.current.set(incident.id, incident.version);
       try {
         const result = await client.listEvents(incident.id, signal);
-        if (signal?.aborted || fetchedVersion.current.get(incident.id) !== incident.version) return;
+        if (signal?.aborted || epoch !== eventEpoch.current || fetchedVersion.current.get(incident.id) !== incident.version) return;
         if (result.ok) {
           setEventsById((current) => ({ ...current, [incident.id]: result.data.items }));
         } else {
@@ -71,7 +73,7 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
           setEventsById((current) => ({ ...current, [incident.id]: undefined }));
         }
       } catch {
-        if (fetchedVersion.current.get(incident.id) === incident.version) fetchedVersion.current.delete(incident.id);
+        if (epoch === eventEpoch.current && fetchedVersion.current.get(incident.id) === incident.version) fetchedVersion.current.delete(incident.id);
       }
     },
     [client],
@@ -110,6 +112,8 @@ export function useBoard({ client, pollMs, announce }: UseBoardOptions) {
         setLoadError({ code: result.code, message: result.message });
         if (result.status === 401 || result.status === 403 || result.status === 404) {
           snapshot.current = null;
+          eventEpoch.current += 1;
+          fetchedVersion.current.clear();
           setIncidents([]);
           setEventsById({});
         }

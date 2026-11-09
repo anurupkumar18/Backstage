@@ -89,3 +89,12 @@
 - **Verified commands and results** · Frontend 119 tests pass, including return timing, storage denial, read-only tool rejection, scoped event reads, microphone muting/stopping and batched tool outputs; TypeScript and production build pass. Node server tests 27/27. Browser with a deliberately missing server key returns a clear voice fallback without requesting microphone permission or contacting a vendor. Browser revealed an initial-token remount could incorrectly mark history seen; the active/history gate and regression cover it. Actual audio hardware and a paid Realtime call remain unverified.
 - **Open issues and next owner or action** · Merge directly to main; do not target an already-merged feature branch. Installable shell and report UI remain later phases. Camera ownership and stage/report API support need their owners. Anurup’s ownership PR #16 is open; no changes made there.
 - **References and latest handoffs reviewed** · `origin/main@e9078ed`, Ali connection `cf3fcbd`, Luke log through demo Elastic provisioning, Ali log through the cluster rehearsal, phone `4d2d5c6`, inbox `80313dd`, activity `eeefc9f`, PR #13 Gitar denied-read finding. Official OpenAI protocol references are linked in openai.md; no vendor credentials were read.
+
+## 2026-11-09 — Reload timeline history after a temporary denial
+
+- **Branch or PR** · `kunj/personal-inbox`, PR #13 review follow-up.
+- **Changes and why** · Gitar found that clearing event data after a denied incident read left the successful-version markers behind. Clear those markers together and advance an event epoch, so history reloads at the same incident version and outstanding older reads cannot repopulate the cleared cache.
+- **Impact by lane** · Web polling only; no contract or API change.
+- **Verified commands and results** · Regression reproduces success → 403 → same-version success and confirms two timeline reads. Frontend 92/92, TypeScript and build pass on Node 22.
+- **Open issues and next owner or action** · Dependent activity and briefing branches must merge this fix before review.
+- **References and latest handoffs reviewed** · PR #13 Gitar inline review and inbox `80313dd`; previous reviewed lane handoffs remain current.

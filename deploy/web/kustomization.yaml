@@ -1,6 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# No namespace here: Ali's platform overlay sets it and can retag the image with `images:`.
+namespace: team-backstage
 resources:
   - web.yaml
 labels:

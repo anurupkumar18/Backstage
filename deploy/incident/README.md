@@ -41,3 +41,18 @@ Record the cluster context, deployed SHAs, incident ID, timeline, job/PDF checks
 The local HTTP equivalent can be rerun without cluster access using `BADGE_SMOKE_SOURCE="$PWD/services/badge-simulator" make check-api`. It tests the actual simulator against the API, organizer and staff gates, three PDFs, and the closing timeline.
 
 For a Radar-only deployment without kubeconfig, follow [Ali's connection handoff](../../docs/handoffs/ali-connect-cluster.md). `render.py` emits the same resources as standalone YAML. After changing bootstrap.py with this render path, restart the API explicitly because the ConfigMap name stays fixed.
+
+## Telemetry and evidence release
+
+See [the operations runbook](../../observability/README.md). The deployment enables
+HTTP/protobuf OTLP to the internal collector and adds service/environment/release
+resources. Update **both** `CODE_SHA` pins before rollout; they must name the same
+published revision containing the telemetry/evidence code. Existing pinned code
+is not upgraded by merely enabling OTEL. Evidence index bootstrap, isolated QA
+prefix and live provider proof remain integration prerequisites. Keep one writer.
+
+`EVIDENCE_PROJECTION_ENABLED` defaults to `false` in this manifest. Provision
+`${ELASTICSEARCH_INDEX_PREFIX}-incident-evidence` from the isolated evidence mapping
+and give the runtime identity scoped `read`, `create_doc`, `view_index_metadata`,
+and `maintenance` refresh privileges before changing it to `true` and rolling out.
+Optional `DASH0_TRACE_URL_TEMPLATE` is a server-only HTTPS Dash0 `{trace_id}` URL.

@@ -24,6 +24,7 @@ export default defineConfig({
     allowedHosts: process.env.DEMO_PUBLIC === "1" ? true : undefined,
     proxy: {
       "/api/v1": { target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8000", changeOrigin: true },
+      "/openai": { target: process.env.WEB_SERVER_PROXY_TARGET ?? "http://127.0.0.1:8787", changeOrigin: true, xfwd: true },
       "/presence": { target: process.env.PRESENCE_PROXY_TARGET ?? "http://127.0.0.1:8787", changeOrigin: true },
     },
   },

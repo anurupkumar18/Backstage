@@ -11,3 +11,9 @@
 .inbox__card[data-kind="resolved"] .inbox__kind { color: var(--ok-text); }
 .inbox__why, .inbox__time { color: var(--muted); font-size: 0.875rem; }
 .inbox__verification { font-weight: 600; }
+
+.inbox__brief { display: grid; gap: 0.75rem; padding-block: 1rem; border-block: 1px solid var(--border); }
+.inbox__brief ul { display: grid; gap: 0.75rem; }
+.inbox__voice { width: min(100%, 40rem); margin: 1.5rem auto; display: grid; gap: 0.75rem; }
+.inbox__voice h2 { font-family: var(--font-display); }
+.inbox__voice audio { width: 100%; }

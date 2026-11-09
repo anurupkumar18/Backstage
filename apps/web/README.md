@@ -35,3 +35,9 @@ Live mode (`VITE_MOCK_API=false`) proxies `/api/v1` to `http://127.0.0.1:8000` (
 In live mode, enter a token and press Enter or **Use token**. Token drafts do not restart polling. Role/token changes discard prior cards and announcements. **Mark updates read** stores only a timestamp per role in local storage; denied storage is supported.
 
 See [frontend integration patterns](agent_docs/frontend_patterns.md) before changing route, polling or permission behavior.
+
+## Floor brief and optional voice
+
+The inbox summarizes scoped events newer than the last successful visit and refreshes the brief after 60 seconds away. Only timestamps are persisted; denied/loading views do not mark history seen. Templates never change incident actions or invent verification.
+
+Voice is off by default. See [the local voice setup and boundary](../../docs/demo/openai.md) before enabling `VITE_ENABLE_VOICE=true`. `npm run presence` now serves the combined presence/OpenAI routes on loopback; existing `/presence` URLs are unchanged. Server tests run under `npm test` or `npm run test:server`. A standard OpenAI key is read only from the Node server environment.

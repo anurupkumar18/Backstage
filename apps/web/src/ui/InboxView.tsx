@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from "react";
+import { FloorBrief } from "./FloorBrief";
 import { AgentActivity } from "./AgentActivity";
 import type { AgentActivity as Activity } from "../inbox/agentActivity";
 import type { Incident } from "../api/types";
@@ -11,6 +12,7 @@ import "./inbox.css";
 interface InboxViewProps {
   items: InboxItem[];
   activity?: Activity[];
+  brief?: { lines: string[]; ready: boolean };
   identity: Identity;
   actionState: Record<string, ActionState | undefined>;
   onAction(incident: Incident, action: "approve" | "ack"): void;
@@ -20,7 +22,7 @@ interface InboxViewProps {
   onMarkSeen(): void;
 }
 
-export function InboxView({ items, identity, actionState, onAction, focusIncidentId, loadError, loading, onMarkSeen, activity }: InboxViewProps) {
+export function InboxView({ items, identity, actionState, onAction, focusIncidentId, loadError, loading, onMarkSeen, activity, brief }: InboxViewProps) {
   const titleId = useId();
   const cards = useRef(new Map<string, HTMLElement>());
   useEffect(() => {
@@ -35,6 +37,7 @@ export function InboxView({ items, identity, actionState, onAction, focusInciden
         {identity.tier === 1 ? <p>Your token shows only your session. Room overflow without a session will not appear here.</p> : null}
         <button type="button" className="btn btn--quiet" onClick={onMarkSeen}>Mark updates read</button>
       </header>
+      {!loadError && !loading && brief ? <FloorBrief {...brief} /> : null}
       {activity ? <AgentActivity activity={activity} /> : null}
       {loadError ? <p role="alert" className="notice"><strong>Could not refresh your inbox.</strong> {loadError.message}</p> : null}
       {loading ? <p>Checking the floor…</p> : null}

@@ -3,6 +3,7 @@ import type { ApiClient } from "../api/client";
 import { deriveAgentActivity } from "../inbox/agentActivity";
 import { deriveInbox } from "../inbox/deriveInbox";
 import type { Identity } from "../ui/types";
+import { useFloorBrief } from "./useFloorBrief";
 import { useBoard } from "./useBoard";
 import { useIncidentActions } from "./useIncidentActions";
 
@@ -18,6 +19,7 @@ export function useInbox(client: ApiClient, identity: Identity, announce: (messa
   const [lastSeen, setLastSeen] = useState(() => readLastSeen(key));
   const board = useBoard({ client, pollMs: 2000, announce });
   const actions = useIncidentActions({ client, applyIncident: board.applyIncident, refresh: board.refresh });
+  const brief = useFloorBrief(board.incidents, board.eventsById, identity.id, board.refresh, !board.loading && !board.loadError);
   const opened = useRef(new Set<string>());
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function useInbox(client: ApiClient, identity: Identity, announce: (messa
     ...board, ...actions,
     items: deriveInbox(board.incidents, board.eventsById, identity, lastSeen),
     activity: deriveAgentActivity(board.incidents, board.eventsById),
+    brief,
     markSeen,
   };
 }

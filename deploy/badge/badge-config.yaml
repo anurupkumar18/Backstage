@@ -1,0 +1,27 @@
+# Non-secret badge settings shared by badge-control and both stations.
+# Tokens live in the badge-secrets Secret, which is never committed (see README).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: badge-config
+  labels:
+    app.kubernetes.io/part-of: backstage
+    app.kubernetes.io/component: badge
+data:
+  PYTHONPATH: /opt/badge/src
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+  BADGE_HOST: 0.0.0.0
+  BADGE_PORT: "8090"
+  BADGE_CONTROL_URL: http://badge-control:8090
+  BADGE_ROOM_ID: room-c
+  BADGE_STORE: mock
+  # Token-protected seed/reset/state routes for the seeded badge scenario (rehearsal controls).
+  BADGE_ADMIN_ENABLED: "true"
+  KUBE_NAMESPACE: team-backstage
+  # Empty until Luke's incident API is deployed; signals are then recorded only.
+  INCIDENT_API_BASE_URL: ""
+  RADAR_MODE: mock
+  RADAR_MCP_URL: https://api.radarhq.io/mcp
+  RADAR_CLUSTER_ID: Wa7aYihloY4
+  OTEL_SERVICE_NAME: badge-control

@@ -1,0 +1,9 @@
+# Aggregate overlay for the team-backstage namespace on cluster "backstage".
+# The namespace already exists (provisioned by the event), so it is not created here.
+# Add each lane's directory once it has a kustomization.yaml:
+#   ../incident  (Luke)   ../web, ../dash0  (Kunj)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: team-backstage
+resources:
+  - ../badge

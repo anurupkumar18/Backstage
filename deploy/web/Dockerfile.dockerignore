@@ -1,0 +1,10 @@
+**
+!contracts/**
+!fixtures/shared/**
+!apps/web/**
+!deploy/web/nginx.conf
+apps/web/node_modules
+apps/web/dist
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example

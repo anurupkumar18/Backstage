@@ -91,11 +91,11 @@ describe("PresenceField", () => {
   it("shows no scaling caption at or below maxBlobs and one above it", () => {
     setup(false);
     const { rerender } = render(<PresenceField counts={counts} variant="compact" maxBlobs={400} />);
-    expect(screen.queryByText(/1 dot/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1 blob/)).not.toBeInTheDocument();
     rerender(<PresenceField counts={{ attendee: 400, speaker: 0, staff: 0, organizer: 0 }} variant="compact" />);
-    expect(screen.getByText("1 dot ≈ 3 people")).toBeInTheDocument();
+    expect(screen.getByText("1 blob ≈ 3 people")).toBeInTheDocument();
     rerender(<PresenceField counts={{ attendee: 400, speaker: 0, staff: 0, organizer: 0 }} variant="compact" maxBlobs={50} />);
-    expect(screen.getByText("1 dot ≈ 8 people")).toBeInTheDocument();
+    expect(screen.getByText("1 blob ≈ 8 people")).toBeInTheDocument();
   });
 
   it("requests no animation frames when reduced motion is preferred, and still draws once", () => {

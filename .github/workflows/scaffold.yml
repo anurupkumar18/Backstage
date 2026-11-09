@@ -17,9 +17,13 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: requirements-check.txt
+          cache-dependency-path: |
+            requirements-check.txt
+            services/incident-api/requirements*.txt
       - run: python -m pip install -r requirements-check.txt
+      - run: python -m pip install -r services/incident-api/requirements-test.txt
       - run: make check
+      - run: make check-api
       - run: |
           make smoke SCENARIO=overflow
           make smoke SCENARIO=stage_av

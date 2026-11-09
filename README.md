@@ -20,6 +20,7 @@ The fixture server listens on `127.0.0.1:8000`. Try `curl http://127.0.0.1:8000/
 
 ## Team
 
+- [Latest team updates and how to hand off each push](docs/handoffs/README.md)
 - [Full team handoff](BACKSTAGE-team-agent-handoff.md)
 - [Kunj · React, accessibility, and Dash0](docs/handoffs/kunj.md)
 - [Ali · Badge simulator, Radar, and Kubernetes](docs/handoffs/ali.md)

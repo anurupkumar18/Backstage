@@ -43,7 +43,7 @@ The build bakes in `VITE_MOCK_API=false`, `VITE_API_BASE_URL=/api/v1` and `VITE_
 - kubeconform validated the built kustomization.
 - Not applied to a cluster.
 
-The bounded traces/logs proxy amendment has been statically checked; nginx runtime/image rebuild must be rechecked during integration.
+The bounded traces/logs proxy amendment passed native nginx 1.31.8 runtime smoke on loopback with production dist, real API/collector, body/method/rate rejection and a credential-stripping capture upstream. The pinned production image rebuild remains an integration gate.
 
 Open question: does the venue demo reach `web` through an Ingress with TLS, so the stage page can use the microphone without a port-forward?
 

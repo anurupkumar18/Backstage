@@ -318,3 +318,30 @@ class EvidenceTests(TestCase):
         self.request(client, 'GET', '/evidence/search?from=2026-11-09%2019:00:00Z', status=422)
         self.request(client, 'GET', '/evidence/search?q=' + 'x' * 201, status=422)
         self.request(client, 'GET', '/evidence/search?from=2026-11-10T19:00:00Z&to=2026-11-09T19:00:00Z', status=422)
+
+    def test_documented_dash0_trace_deeplink_accepts_only_validated_parameters(self):
+        from backstage_api.evidence import trace_url
+        tid = '1234567890abcdef1234567890abcdef'
+        base = 'https://app.dash0.com/goto/traces/explorer'
+        org = '00112233-4455-6677-8899-aabbccddeeff'
+        for trace_key in ('trace_id', 'traceid'):
+            template = base + '?' + trace_key + '={trace_id}&org=' + org + '&dataset=default&from=now-1h&to=now'
+            self.assertEqual(trace_url(template, tid), template.replace('{trace_id}', tid))
+        absolute = base + '?trace_id={trace_id}&from=2026-11-09T19%3A00%3A00Z&to=2026-11-09T20%3A00%3A00Z'
+        self.assertEqual(trace_url(absolute, tid), absolute.replace('{trace_id}', tid))
+        self.assertEqual(trace_url('https://app.dash0.com/traces/{trace_id}', tid),
+                         'https://app.dash0.com/traces/' + tid)
+        for query in ('trace_id={trace_id}&token=secret', 'trace_id={trace_id}&org=not-a-uuid',
+                      'trace_id={trace_id}&dataset=secret%26token%3Dcredential',
+                      'trace_id={trace_id}&from=secret', 'trace_id={trace_id}&from=2026-02-30T19%3A00%3A00Z',
+                      'trace_id={trace_id}&to=', 'trace_id={trace_id}&dataset=default&dataset=other',
+                      'trace_id={trace_id}&traceid=' + tid, 'trace_id=' + tid + '&dataset={trace_id}',
+                      'trace_id={trace_id}&filter=%7B%22secret%22%3Atrue%7D'):
+            self.assertIsNone(trace_url(base + '?' + query, tid), query)
+        for template in ('https://app.dash0.com:443/goto/traces/explorer?trace_id={trace_id}',
+                         'https://app.dash0.com:invalid/traces/{trace_id}',
+                         'https://app.dash0.com/goto/logs?trace_id={trace_id}',
+                         'https://app.dash0.com/goto/traces/explorer?trace_id={trace_id}#secret',
+                         'https://secret@app.dash0.com/goto/traces/explorer?trace_id={trace_id}',
+                         'https://app.dash0.com.evil.example/goto/traces/explorer?trace_id={trace_id}'):
+            self.assertIsNone(trace_url(template, tid), template)

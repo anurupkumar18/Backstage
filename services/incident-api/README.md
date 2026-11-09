@@ -80,7 +80,7 @@ Incoming W3C `traceparent` context is extracted. Elasticsearch operations have s
 
 Application logs are JSON from an allowlist of event/operation/outcome, generated incident/event references, state/storage mode, HTTP method/route/status, count and trace ID. They never include HTTP bodies, queries, authorization headers, idempotency keys, Elasticsearch document bodies or exception contents. Start Uvicorn with `--no-access-log` so its default access log does not independently print query strings. The deployment uses that flag.
 
-Optional `DASH0_TRACE_URL_TEMPLATE` creates a trace link without querying Dash0. It must have one `{trace_id}` placeholder, an HTTPS `dash0.com` host or subdomain, and no userinfo, query or fragment. Invalid templates yield a null link. A trace ID/link alone is not evidence that Dash0 ingested it.
+Optional `DASH0_TRACE_URL_TEMPLATE` creates a trace link without querying Dash0. It must have one `{trace_id}` placeholder, an HTTPS `dash0.com` host or subdomain, and no userinfo, port or fragment. The [documented Dash0 trace explorer deep link](https://www.dash0.com/docs/dash0/miscellaneous/glossary/deeplink-urls) supports `/goto/traces/explorer?trace_id={trace_id}&org=<uuid>&dataset=default`, with validated optional `from`/`to` relative or UTC timestamps. The documented example alias `traceid` is also accepted. Only these query keys are allowed; duplicate keys, arbitrary filters and credential parameters are rejected. Existing query-free trace paths remain valid. Invalid templates yield a null link. A trace ID/link alone is not evidence that Dash0 ingested it.
 
 Metric contract (duration units are seconds):
 
@@ -93,4 +93,4 @@ Metric contract (duration units are seconds):
 | `backstage.evidence.projection.duration`, `backstage.evidence.search.duration` | `outcome=success/error` |
 | `backstage.evidence.projection.lag` | Checkpoint sequence-number gap, unit `1`; no observation until a real indexed revision exists |
 
-No full deadline/SLO timers are emitted by this implementation. A projection watermark is local to the running projector and is re-established on restart only after all creates/conflicts and refresh succeed.
+Duration histograms use explicit second boundaries `0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10`. No full deadline/SLO timers are emitted by this implementation. A projection watermark is local to the running projector and is re-established on restart only after all creates/conflicts and refresh succeed.

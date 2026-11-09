@@ -12,10 +12,12 @@ from opentelemetry.trace import Status, StatusCode
 from opentelemetry._logs import SeverityNumber
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 
 LOGGER = logging.getLogger('backstage.incident_api.events')
+DURATION_BOUNDS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
 LOG_FIELDS = frozenset({'event', 'operation', 'outcome', 'incident_id', 'event_id', 'event_type',
                         'state', 'storage_mode', 'method', 'route', 'status_code', 'trace_id', 'count'})
 
@@ -28,11 +30,13 @@ class Telemetry:
             attributes['service.name'] = os.getenv('OTEL_SERVICE_NAME', 'incident-api')
         attributes.setdefault('service.version', os.getenv('CODE_SHA', 'unknown'))
         resource = Resource(attributes)
+        duration_view = View(instrument_name='backstage.*.duration',
+                             aggregation=ExplicitBucketHistogramAggregation(DURATION_BOUNDS))
         self.owns_trace = tracer_provider is None
         self.owns_meter = meter_provider is None
         self.owns_logs = logger_provider is None
         self.tracer_provider = tracer_provider or TracerProvider(resource=resource, shutdown_on_exit=False)
-        self.meter_provider = meter_provider or MeterProvider(resource=resource, shutdown_on_exit=False)
+        self.meter_provider = meter_provider or MeterProvider(resource=resource, views=[duration_view], shutdown_on_exit=False)
         self.logger_provider = logger_provider or LoggerProvider(resource=resource, shutdown_on_exit=False)
         self.tracer = self.tracer_provider.get_tracer('backstage.incident-api')
         self.logger = self.logger_provider.get_logger('backstage.incident-api')
@@ -67,7 +71,7 @@ class Telemetry:
                     reader = PeriodicExportingMetricReader(OTLPMetricExporter(timeout=2),
                                                            export_interval_millis=5000,
                                                            export_timeout_millis=2000)
-                    self.meter_provider = MeterProvider(resource=resource, metric_readers=[reader],
+                    self.meter_provider = MeterProvider(resource=resource, metric_readers=[reader], views=[duration_view],
                                                         shutdown_on_exit=False)
                     self.meter = self.meter_provider.get_meter('backstage.incident-api')
                     self.counters = {name: self.meter.create_counter(name) for name in self.counters}

@@ -157,5 +157,16 @@ ports 14317/14318/14333 accepted one labeled synthetic OTLP/JSON trace and log
 (200 with exact-origin CORS), rejected malformed log JSON (400), and emitted
 one span / one log record through debug. Process stopped afterward. All 14 owned
 YAML files parsed, source/ConfigMap equality and incident standalone render passed.
-No current nginx binary, image build, kustomize/kubeconform, cluster apply, provider
-receipt or dashboard import was tested by this amendment's local validation.
+Follow-up native nginx 1.31.8 smoke served production dist on isolated loopback
+port 5181 and proxied real local API/collector: trace/log POSTs and legacy routes
+200, unauthenticated API 401, GET/PUT/DELETE ingest denial 403, malformed JSON
+400, >2 MiB body 413, and rate exhaustion 429. A capture upstream verified /otel
+rewrite and removal of caller credentials/context headers. All temporary smoke
+processes stopped afterward. This is native nginx evidence; the pinned production
+nginx image, kustomize/kubeconform, cluster apply, provider receipt and dashboard
+import remain separate integration gates.
+
+API privacy: start local Uvicorn with `--no-access-log` (the cluster manifest
+also sets it). nginx API access logs are disabled so evidence search query
+strings are not persisted. The backend allowlisted OTLP request event supplies
+method, route template, status and duration without query/body/header values.

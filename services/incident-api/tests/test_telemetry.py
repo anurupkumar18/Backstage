@@ -66,6 +66,19 @@ class TelemetryTests(TestCase):
             self.assertIn(b'qa-commit', payloads)
             self.assertIn(b'backstage.http.requests', payloads)
             self.assertIn(b'http.denied', payloads)
+            from opentelemetry.proto.collector.metrics.v1.metrics_service_pb2 import ExportMetricsServiceRequest
+            expected_bounds = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+            duration_points = []
+            for payload in received['/v1/metrics']:
+                exported = ExportMetricsServiceRequest.FromString(payload)
+                for resource in exported.resource_metrics:
+                    for scope in resource.scope_metrics:
+                        for metric in scope.metrics:
+                            if metric.name == 'backstage.http.request.duration':
+                                self.assertEqual(metric.unit, 's')
+                                duration_points.extend(metric.histogram.data_points)
+            self.assertTrue(duration_points)
+            self.assertTrue(all(tuple(point.explicit_bounds) == expected_bounds for point in duration_points))
         finally:
             server.shutdown()
             server.server_close()

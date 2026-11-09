@@ -6,10 +6,15 @@ import { useBoard } from "./hooks/useBoard";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { useIncidentActions } from "./hooks/useIncidentActions";
 import { useSessionTokens } from "./hooks/useSessionTokens";
+import { createHttpPresenceApi } from "./api/presence";
+import type { PresenceCounts, PresenceTier } from "./api/types";
+import { usePresence } from "./hooks/usePresence";
+import { PresenceSimulator } from "./mock/presence";
+import { LIVE_IDENTITIES } from "./live/identities";
 import { useStatus } from "./hooks/useStatus";
 import { MockIncidentApi } from "./mock/store";
 import { createMockTransport, DEMO_IDENTITIES, MOCK_PRINCIPALS } from "./mock/transport";
-import { AppShell, BoardView, DevPanel, StatusView } from "./ui";
+import { AppShell, BoardView, DevPanel, JoinPage, StatusView } from "./ui";
 
 const MOCK_MODE = import.meta.env.VITE_MOCK_API !== "false";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
@@ -21,9 +26,10 @@ interface BoardRouteProps {
   client: ApiClient;
   announce: (message: string) => void;
   registerProbe: (probe: (() => void) | null) => void;
+  presence: PresenceCounts | null;
 }
 
-function BoardRoute({ client, announce, registerProbe }: BoardRouteProps) {
+function BoardRoute({ client, announce, registerProbe, presence }: BoardRouteProps) {
   const board = useBoard({ client, pollMs: BOARD_POLL_MS, announce });
   const actions = useIncidentActions({
     client,
@@ -40,6 +46,7 @@ function BoardRoute({ client, announce, registerProbe }: BoardRouteProps) {
 
   return (
     <BoardView
+      presence={presence}
       renderEvidence={(incident) => <IncidentEvidence key={incident.id} incident={incident} client={client} mockMode={MOCK_MODE} />}
       incidents={board.incidents}
       eventsById={board.eventsById}
@@ -53,9 +60,9 @@ function BoardRoute({ client, announce, registerProbe }: BoardRouteProps) {
   );
 }
 
-function StatusRoute({ client, variant }: { client: ApiClient; variant: "attendee" | "projector" }) {
+function StatusRoute({ client, variant, presence, joinUrl }: { client: ApiClient; variant: "attendee" | "projector"; presence: PresenceCounts | null; joinUrl: string }) {
   const { status, error } = useStatus(client, STATUS_POLL_MS);
-  return <StatusView status={status} error={error} variant={variant} />;
+  return <StatusView status={status} error={error} variant={variant} presence={presence} joinUrl={variant === "projector" ? joinUrl : undefined} />;
 }
 
 export default function App() {
@@ -66,8 +73,13 @@ export default function App() {
   const [mockApi] = useState(() => (MOCK_MODE ? new MockIncidentApi({ principals: MOCK_PRINCIPALS }) : null));
   const probe = useRef<(() => void) | null>(null);
 
-  const identity = DEMO_IDENTITIES.find((candidate) => candidate.id === identityId) ?? DEMO_IDENTITIES[0];
+  const identities = MOCK_MODE ? DEMO_IDENTITIES : LIVE_IDENTITIES;
+  const identity = identities.find((candidate) => candidate.id === identityId) ?? identities[0];
   const token = MOCK_MODE ? (identity?.token ?? "") : (liveTokens[identityId] ?? "");
+  const [presenceApi] = useState(() => MOCK_MODE ? new PresenceSimulator() : createHttpPresenceApi());
+  const presence = usePresence(presenceApi, 2000);
+  const [joinedTier, setJoinedTier] = useState<PresenceTier | null>(null);
+  const joinUrl = `${window.location.origin}/#/join`;
 
   const client = useMemo(
     () =>
@@ -86,21 +98,32 @@ export default function App() {
 
   const devPanel = mockApi ? (
     <DevPanel
+      onCheckInWave={() => presenceApi instanceof PresenceSimulator && presenceApi.wave()}
       onBumpVersion={() => mockApi.bumpVersion()}
       onProbeDeniedApprove={() => probe.current?.()}
       onDropNextResponse={() => mockApi.dropNextResponse()}
       onReset={() => {
         mockApi.reset();
+        if (presenceApi instanceof PresenceSimulator) presenceApi.reset();
+        setJoinedTier(null);
         setAnnouncement("Mock scenario reset to the proposed plan.");
       }}
     />
   ) : undefined;
 
+  if (route === "join") {
+    return <main><JoinPage joinedTier={joinedTier} onJoin={async (tier) => {
+      const result = await presenceApi.join(tier);
+      if (result.ok) setJoinedTier(tier);
+      return result;
+    }} /></main>;
+  }
+
   return (
     <AppShell
       route={route}
       onNavigate={navigate}
-      identities={DEMO_IDENTITIES}
+      identities={identities}
       activeIdentityId={identityId}
       onIdentityChange={setIdentityId}
       mockMode={MOCK_MODE}
@@ -110,10 +133,12 @@ export default function App() {
       devPanel={devPanel}
     >
       {route === "board" ? (
-        <BoardRoute key={`board-${identityId}-${credentialGeneration}`} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
+        <BoardRoute key={`board-${identityId}-${credentialGeneration}`} presence={presence} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
       ) : (
         <StatusRoute
           key={`${route}-${identityId}-${credentialGeneration}`}
+          presence={presence}
+          joinUrl={joinUrl}
           client={client}
           variant={route === "projector" ? "projector" : "attendee"}
         />

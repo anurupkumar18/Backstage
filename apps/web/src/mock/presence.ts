@@ -6,6 +6,7 @@ const WAVE_BATCH_MS = 250;
 
 export class PresenceSimulator implements PresenceApi {
   private counts: PresenceCounts;
+  private joinedTier: PresenceTier | null = null;
   private readonly seed: PresenceCounts;
   private timers = new Set<ReturnType<typeof setTimeout>>();
 
@@ -19,7 +20,9 @@ export class PresenceSimulator implements PresenceApi {
   }
 
   async join(tier: PresenceTier): Promise<JoinResult> {
+    if (this.joinedTier) this.counts[this.joinedTier] -= 1;
     this.counts[tier] += 1;
+    this.joinedTier = tier;
     return { ok: true, message: "You are on the floor." };
   }
 
@@ -44,5 +47,6 @@ export class PresenceSimulator implements PresenceApi {
     this.timers.forEach((timer) => clearTimeout(timer));
     this.timers.clear();
     this.counts = { ...this.seed };
+    this.joinedTier = null;
   }
 }

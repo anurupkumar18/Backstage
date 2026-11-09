@@ -2,6 +2,7 @@ import { useId } from "react";
 import type { PresenceCounts, PublicRoomStatus, PublicStatus } from "../api/types";
 import { EVENT, venueRoomLabel } from "../venue/kubecon-na-2026";
 import { PRIVACY_NOTE } from "./AppShell";
+import { JoinQr } from "./JoinQr";
 import { PresenceField } from "./PresenceField";
 import { ROOM_STATUS_LABEL, roomLabel } from "./format";
 import type { UiError } from "./types";
@@ -14,6 +15,8 @@ export interface StatusViewProps {
   error: UiError | null;
   variant: "attendee" | "projector";
   presence?: PresenceCounts | null;
+  /** Projector only: the attendee join link, shown as a large QR next to the presence hero. */
+  joinUrl?: string;
 }
 
 function StatusWord({ status }: { status: PublicRoomStatus }) {
@@ -25,7 +28,7 @@ function StatusWord({ status }: { status: PublicRoomStatus }) {
   );
 }
 
-export function StatusView({ status, error, variant, presence }: StatusViewProps) {
+export function StatusView({ status, error, variant, presence, joinUrl }: StatusViewProps) {
   const titleId = useId();
   const roomsId = useId();
   const sessionsId = useId();
@@ -63,7 +66,13 @@ export function StatusView({ status, error, variant, presence }: StatusViewProps
 
       {status === null && !error ? <p className="status__empty">Loading status...</p> : null}
 
-      {presence ? <PresenceField counts={presence} variant={projector ? "hero" : "compact"} /> : null}
+      {projector && (presence || joinUrl) ? (
+        <div className="status__hero" data-with-qr={joinUrl ? "true" : undefined}>
+          {presence ? <PresenceField counts={presence} variant="hero" /> : null}
+          {joinUrl ? <JoinQr url={joinUrl} /> : null}
+        </div>
+      ) : null}
+      {!projector && presence ? <PresenceField counts={presence} variant="compact" /> : null}
 
       {status ? (
         <>

@@ -1,0 +1,137 @@
+# Approval-gated badge rehearsal through the incident API, run inside the cluster.
+# Not part of the kustomization. Unlike drill-job.yaml it never reroutes itself:
+# the API's IT worker does that after organizer approval and IT acceptance.
+#
+#   kubectl -n team-backstage scale deployment/badge-station-a --replicas=0
+#   kubectl -n team-backstage wait --for=delete pod -l app.kubernetes.io/name=badge-station-a --timeout=90s
+#   kubectl -n team-backstage delete job badge-incident-rehearsal --ignore-not-found
+#   kubectl -n team-backstage apply -f deploy/badge/incident-rehearsal-job.yaml
+#   kubectl -n team-backstage logs -f job/badge-incident-rehearsal   # ends with REHEARSAL PASSED
+#   kubectl -n team-backstage scale deployment/badge-station-a --replicas=1
+#
+# Needs incident-api ready, badge-config INCIDENT_API_BASE_URL set, and the badge pods
+# restarted after BADGE_SIGNAL_TOKEN was set. Reads the organizer and IT tokens from
+# incident-secrets inside the pod and prints IDs and states only.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: badge-incident-rehearsal
+  labels:
+    app.kubernetes.io/part-of: backstage
+    app.kubernetes.io/component: badge-drill
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 7200
+  activeDeadlineSeconds: 420
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: badge-drill
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: rehearsal
+          image: public.ecr.aws/docker/library/python:3.13-slim
+          env:
+            - name: BADGE_INTERNAL_TOKEN
+              valueFrom: {secretKeyRef: {name: badge-secrets, key: BADGE_INTERNAL_TOKEN}}
+            - name: AUTH_TOKENS_JSON
+              valueFrom: {secretKeyRef: {name: incident-secrets, key: AUTH_TOKENS_JSON}}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          command:
+            - python
+            - -u
+            - -c
+            - |
+              # Approval-gated badge rehearsal. Prints IDs and states only, never tokens.
+              import json, os, time, urllib.error, urllib.request
+              BADGE = "http://badge-control:8090"
+              API = "http://incident-api:8000/api/v1"
+              JOBS = ["badge-job-001", "badge-job-002", "badge-job-003"]
+              by_id = {ident["id"]: tok for tok, ident in json.loads(os.environ["AUTH_TOKENS_JSON"]).items()}
+              ORG = by_id["organizer"]
+              def call(base, method, path, token, body=None, key=None):
+                  headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+                  if key:
+                      headers["Idempotency-Key"] = key
+                  req = urllib.request.Request(base + path, method=method, headers=headers,
+                                               data=json.dumps(body).encode() if body is not None else None)
+                  try:
+                      with urllib.request.urlopen(req, timeout=15) as r:
+                          return r.status, json.load(r)
+                  except urllib.error.HTTPError as e:
+                      return e.code, json.load(e)
+              def badge(method, path, body=None):
+                  return call(BADGE, method, path, os.environ["BADGE_INTERNAL_TOKEN"], body)
+              def log(step, payload=""):
+                  print(f"[{time.strftime('%H:%M:%S')}] {step} {json.dumps(payload) if payload != '' else ''}")
+              def until(label, fn, seconds, every=2):
+                  deadline = time.time() + seconds
+                  while time.time() < deadline:
+                      value = fn()
+                      if value:
+                          return value
+                      time.sleep(every)
+                  raise SystemExit(f"TIMED OUT: {label}")
+              run = int(time.time())
+              badge("POST", "/admin/reset")
+              state = until("station-b online, station-a silent", lambda: (lambda s: s if s["stations"]["station-b"]["online"] and not s["stations"]["station-a"]["online"] else None)(badge("GET", "/admin/state")[1]), 60)
+              log("stations", state["stations"])
+              status, seeded = badge("POST", "/admin/seed", {"station_id": "station-a", "job_ids": JOBS})
+              log(f"seed {status}", [j["job_id"] + "@" + j["station_id"] for j in seeded["jobs"]])
+              def proposed():
+                  s, body = call(API, "GET", "/incidents", ORG)
+                  for item in body.get("items", []) if s == 200 else []:
+                      if item["type"] == "badge_stall" and item["room_id"] == "room-c" and item["state"] == "plan_proposed":
+                          return item
+              inc = until("badge_stall incident in plan_proposed", proposed, 120)
+              iid = inc["id"]
+              log("incident proposed", {"id": iid, "version": inc["version"], "plan": inc["plan"], "priority": inc["priority"]})
+              status, after = call(API, "POST", f"/incidents/{iid}/actions", ORG,
+                                   {"action": "approve", "expected_version": inc["version"], "payload": {"plan_id": inc["plan"]["id"]}},
+                                   key=f"rehearsal-approve-{run}")
+              log(f"approve {status}", {"state": after.get("state"), "error": after.get("error")})
+              def dispatched():
+                  s, body = call(API, "GET", f"/incidents/{iid}", ORG)
+                  return body if s == 200 and body["state"] == "dispatched" and body.get("assignment") else None
+              inc = until("dispatched to IT", dispatched, 60)
+              assignee = inc["assignment"]["assignee_id"]
+              log("dispatched", {"assignment": inc["assignment"]})
+              status, after = call(API, "POST", f"/incidents/{iid}/actions", by_id[assignee],
+                                   {"action": "ack", "expected_version": inc["version"],
+                                    "payload": {"assignment_id": inc["assignment"]["id"], "decision": "accepted"}},
+                                   key=f"rehearsal-ack-{run}")
+              log(f"ack by {assignee} {status}", {"state": after.get("state"), "error": after.get("error")})
+              def resolved():
+                  s, body = call(API, "GET", f"/incidents/{iid}", ORG)
+                  return body if s == 200 and body["state"] == "resolved" else None
+              final = until("incident resolved", resolved, 180, every=3)
+              log("resolved", {"state": final["state"], "verification": final["verification"], "version": final["version"]})
+              jobs = [badge("GET", f"/internal/badges/jobs/{j}")[1] for j in JOBS]
+              for job in jobs:
+                  log("job", job)
+              s, events = call(API, "GET", f"/incidents/{iid}/events", ORG)
+              items = events.get("items", [])
+              log("timeline", [e["type"] for e in items])
+              closing = [e for e in items if e["type"] in ("verify", "close")]
+              for e in closing:
+                  log(f"event {e['type']}", {"state_to": e["state_to"], "evidence": e["payload"].get("evidence_signal_ids")})
+              types = [e["type"] for e in items]
+              ok = (types[-2:] == ["verify", "close"]
+                    and all(j["status"] == "complete" and j["station_id"] == "station-b" and j["pdf_ref"] == "pdf-" + j["job_id"] for j in jobs)
+                    and len(closing[-1]["payload"].get("evidence_signal_ids") or []) >= 3)
+              print("REHEARSAL PASSED" if ok else "REHEARSAL FAILED")
+              raise SystemExit(0 if ok else 1)

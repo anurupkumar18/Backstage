@@ -107,3 +107,12 @@
 - **Verified commands and results** · Main integration frontend 120 tests, Node server 27 tests, TypeScript/build and diff checks pass. Earlier 390px real-API lifecycle and missing-key voice fallback apply. Browser confirms the first successful staff token entry shows its recent recovery summary.
 - **Open issues and next owner or action** · Target main for this PR. Camera ownership, real microphone/Realtime test, stage captions, report intake and sponsor access remain explicit dependencies.
 - **References and latest handoffs reviewed** · Main `e9078ed`, Ali connection `cf3fcbd`, phone-join `a19eac9`, personal-inbox `66888a3`, activity `eeefc9f`, local cache fix `c00db14`. Contracts remain `8b902d2f715d1c068a1f4a10bfb3c850a37abf7a`.
+
+## 2026-11-09 — Recover camera/gateway test evidence and current next steps
+
+- **Branch or PR** · `kunj/floor-briefing`, PR #17, directly targeting main.
+- **Changes and why** · Added continuation-status.md to supersede the stale implementation inventory and identify what the stopped agents actually left on disk. Camera tests passed 73/73 and gateway tests 10/10; neither code chunk is represented as shipped or live-verified. Recorded the missing launcher, remaining stage/report work and Anurup's Dash0 ownership prerequisite.
+- **Impact by lane** · Camera source remains untouched in the unassigned edge lane. Dash0/evidence is being handled by Anurup; the prerequisite is #16. Ali's published cluster success is attributed to his log, not this session's direct observation.
+- **Verified commands and results** · Camera pytest in its existing .venv, with cache/bytecode output disabled: 73 passed. Gateway node:test: 10 passed. Existing #17 validation remains 120 frontend, 27 Node server, TypeScript/build, and real local API browser lifecycle.
+- **Open issues and next owner or action** · Explicit in continuation-status.md. No real microphone, paid model, cloud telemetry or live crowd claim.
+- **References and latest handoffs reviewed** · PR #17, PR #16 at 98aa8dd, main e9078ed and Ali cf3fcbd; all four stopped-agent inventories checked.

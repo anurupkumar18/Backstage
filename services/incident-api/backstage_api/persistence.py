@@ -123,15 +123,17 @@ class ElasticsearchCheckpoint:
         self.telemetry = None
 
     def _get(self, *, source):
-        try:
-            with self.telemetry.es_operation("load") if self.telemetry else nullcontext():
+        with self.telemetry.es_operation("load") if self.telemetry else nullcontext():
+            try:
                 return self.client.get(index=self.alias, id=DOCUMENT_ID, source=source)
-        except NotFoundError as error:
-            if isinstance(error.body, dict) and error.body.get("found") is False:
-                return None
-            raise unavailable() from error
-        except (ElasticsearchError, TransportError) as error:
-            raise unavailable() from error
+            except NotFoundError as error:
+                # An empty, provisioned checkpoint is a healthy initial state.
+                # Classify its expected missing-document response before telemetry ends.
+                if isinstance(error.body, dict) and error.body.get("found") is False:
+                    return None
+                raise unavailable() from error
+            except (ElasticsearchError, TransportError) as error:
+                raise unavailable() from error
 
     def check(self):
         self._get(source=False)

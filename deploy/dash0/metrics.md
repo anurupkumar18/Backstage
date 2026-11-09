@@ -25,7 +25,8 @@ Projection lag is latest committed snapshot revision minus searchable indexed
 revision, **not elapsed time**. Zero lag proves only projector catch-up. It does
 not prove fresh sources, healthy capture, or Dash0 delivery.
 
-The dashboard uses Dash0's native histogram selectors and `histogram_quantile`
+The dashboard groups series by `service_version` so releases with different
+histogram buckets remain separate. The dashboard uses Dash0's native histogram selectors and `histogram_quantile`
 without `le`; label names are Prometheus-normalized (`service_name`). Queries
 remain empty when an instrument has no samples. Never add `or vector(0)` to
 turn missing telemetry into a passing result. Low request counts make p95

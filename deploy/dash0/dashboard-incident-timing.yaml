@@ -1,5 +1,5 @@
-# Measured instruments only. Missing samples remain no data; no synthetic zero/health fallback.
-# See metrics.md and the official Dash0 source-format reference.
+# Measured instruments only. Release-separated series avoid mixing histogram bucket configurations.
+# Missing samples remain no data; no synthetic zero/health fallback. See metrics.md.
 apiVersion: perses.dev/v1alpha1
 kind: PersesDashboard
 metadata:
@@ -82,7 +82,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: sum by (method,route) (rate({otel_metric_name="backstage.http.requests",service_name="incident-api"}[5m]))
+                query: sum by (service_version,method,route) (rate({otel_metric_name="backstage.http.requests",service_name="incident-api"}[5m]))
     http_errors:
       kind: Panel
       spec:
@@ -97,7 +97,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: sum by (status_code) (rate({otel_metric_name="backstage.http.requests",service_name="incident-api",status_code=~"[45].."}[5m]))
+                query: sum by (service_version,status_code) (rate({otel_metric_name="backstage.http.requests",service_name="incident-api",status_code=~"[45].."}[5m]))
     http_duration:
       kind: Panel
       spec:
@@ -112,7 +112,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: histogram_quantile(0.95, sum by (method,route) (rate({otel_metric_name="backstage.http.request.duration",service_name="incident-api"}[5m])))
+                query: histogram_quantile(0.95, sum by (service_version,method,route) (rate({otel_metric_name="backstage.http.request.duration",service_name="incident-api"}[5m])))
     es_duration:
       kind: Panel
       spec:
@@ -127,7 +127,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: histogram_quantile(0.95, sum by (operation,outcome) (rate({otel_metric_name="backstage.elasticsearch.request.duration",service_name="incident-api"}[5m])))
+                query: histogram_quantile(0.95, sum by (service_version,operation,outcome) (rate({otel_metric_name="backstage.elasticsearch.request.duration",service_name="incident-api"}[5m])))
     persistence_errors:
       kind: Panel
       spec:
@@ -142,7 +142,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: sum by (operation) (rate({otel_metric_name="backstage.persistence.operations",service_name="incident-api",outcome="error"}[5m]))
+                query: sum by (service_version,operation) (rate({otel_metric_name="backstage.persistence.operations",service_name="incident-api",outcome="error"}[5m]))
     search_duration:
       kind: Panel
       spec:
@@ -157,7 +157,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: histogram_quantile(0.95, sum by (outcome) (rate({otel_metric_name="backstage.evidence.search.duration",service_name="incident-api"}[5m])))
+                query: histogram_quantile(0.95, sum by (service_version,outcome) (rate({otel_metric_name="backstage.evidence.search.duration",service_name="incident-api"}[5m])))
     projection_lag:
       kind: Panel
       spec:
@@ -172,7 +172,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: max({otel_metric_name="backstage.evidence.projection.lag",service_name="incident-api"})
+                query: max by (service_version) ({otel_metric_name="backstage.evidence.projection.lag",service_name="incident-api"})
     projection_duration:
       kind: Panel
       spec:
@@ -187,7 +187,7 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: histogram_quantile(0.95, sum by (outcome) (rate({otel_metric_name="backstage.evidence.projection.duration",service_name="incident-api"}[5m])))
+                query: histogram_quantile(0.95, sum by (service_version,outcome) (rate({otel_metric_name="backstage.evidence.projection.duration",service_name="incident-api"}[5m])))
     documents:
       kind: Panel
       spec:
@@ -202,4 +202,4 @@ spec:
             plugin:
               kind: PrometheusTimeSeriesQuery
               spec:
-                query: sum by (kind,outcome) (rate({otel_metric_name="backstage.evidence.documents",service_name="incident-api"}[5m]))
+                query: sum by (service_version,kind,outcome) (rate({otel_metric_name="backstage.evidence.documents",service_name="incident-api"}[5m]))

@@ -211,3 +211,55 @@ class PersistenceTests(TestCase):
         self.assertEqual(os.getenv("APP_MODE"), "live")
         self.assertTrue(os.getenv("ELASTICSEARCH_INDEX_PREFIX") == "backstage-smoke")
         self.verify_restart(configured_checkpoint)
+
+
+class CheckpointTelemetryTests(TestCase):
+    def test_empty_checkpoint_load_is_healthy_but_missing_index_remains_error(self):
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.trace import StatusCode
+        from backstage_api.engine import ApiError
+        from backstage_api.telemetry import Telemetry
+
+        reader = InMemoryMetricReader()
+        meter = MeterProvider(metric_readers=[reader], shutdown_on_exit=False)
+        provider = TracerProvider(shutdown_on_exit=False)
+        exporter = InMemorySpanExporter()
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
+        self.addCleanup(meter.shutdown)
+        self.addCleanup(provider.shutdown)
+        telemetry = Telemetry(tracer_provider=provider, meter_provider=meter)
+        self.addCleanup(telemetry.close)
+        tracer = provider.get_tracer('test.checkpoint')
+
+        def outcomes():
+            data = reader.get_metrics_data()
+            return {point.attributes['outcome']: point.value
+                    for resource in data.resource_metrics for scope in resource.scope_metrics
+                    for metric in scope.metrics if metric.name == 'backstage.persistence.operations'
+                    for point in metric.data.data_points if point.attributes['operation'] == 'load'}
+
+        empty = CheckpointTransport().checkpoint()
+        self.addCleanup(empty.close)
+        empty.telemetry = telemetry
+        store, revision = empty.load(tracer)
+        self.assertEqual(store.incidents, {})
+        self.assertIsNone(revision)
+        self.assertEqual(outcomes(), {'success': 1})
+        empty_span = exporter.get_finished_spans()[-1]
+        self.assertEqual(empty_span.attributes['operation.outcome'], 'success')
+        self.assertNotEqual(empty_span.status.status_code, StatusCode.ERROR)
+
+        missing = CheckpointTransport(exists=False).checkpoint()
+        self.addCleanup(missing.close)
+        missing.telemetry = telemetry
+        with self.assertRaises(ApiError) as raised:
+            missing.load(tracer)
+        self.assertEqual(raised.exception.status, 503)
+        self.assertEqual(outcomes(), {'success': 1, 'error': 1})
+        missing_span = exporter.get_finished_spans()[-1]
+        self.assertEqual(missing_span.attributes['operation.outcome'], 'error')
+        self.assertEqual(missing_span.status.status_code, StatusCode.ERROR)

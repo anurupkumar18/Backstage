@@ -147,7 +147,7 @@ export default function App() {
       devPanel={devPanel}
     >
       {route === "demo" ? (
-        <VideoDemo />
+        <VideoDemo key={`video-${credentialGeneration}`} token={MOCK_MODE ? "" : token} />
       ) : route === "history" ? (
         <HistoryView key={`history-${identityId}-${credentialGeneration}`} client={client} mockMode={MOCK_MODE} />
       ) : route === "me" && identity && identity.tier > 0 ? (

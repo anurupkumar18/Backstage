@@ -60,3 +60,36 @@ it("ignores a late permission rejection after switching back to the demo", async
   await act(async () => reject(new Error("Permission denied")));
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
+
+
+it("retries a busy detector and sends the role bearer only on inference", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const drawing = vi.fn();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: drawing } as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((callback) => callback(new Blob(["jpeg"], { type: "image/jpeg" })));
+  let detections = 0;
+  fetchMock.mockImplementation(async (path: string) => {
+    if (path.includes("detections")) return { ok: true, json: async () => recording };
+    if (path === "/camera/detect") {
+      detections++;
+      return detections === 1 ? { ok: false, status: 429 } : { ok: true, json: async () => ({ model: "live-model", boxes: [], inference_ms: 10 }) };
+    }
+    return { ok: false };
+  });
+  const { container, unmount } = render(<VideoDemo token="role-test-token" />);
+  fireEvent.click(screen.getByRole("button", { name: "Run YOLO live" }));
+  const video = container.querySelector("video")!;
+  Object.defineProperties(video, { readyState: { value: 4 }, videoWidth: { value: 640 }, videoHeight: { value: 360 } });
+  fireEvent.play(video);
+  await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+  expect(detections).toBe(1);
+  expect(screen.getByRole("button", { name: "Hide detections" })).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  await act(async () => { await vi.advanceTimersByTimeAsync(750); });
+  expect(detections).toBeGreaterThan(1);
+  const request = fetchMock.mock.calls.find(([path]) => path === "/camera/detect");
+  expect((request?.[1] as RequestInit).headers).toMatchObject({ Authorization: "Bearer role-test-token" });
+  expect(fetchMock.mock.calls.filter(([path]) => path !== "/camera/detect").every((call) => !(call[1] as RequestInit)?.headers)).toBe(true);
+  unmount();
+  vi.useRealTimers();
+});

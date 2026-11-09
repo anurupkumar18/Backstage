@@ -118,3 +118,8 @@ API points to its published runtime; both images are pullable; optional server-o
 `web-openai` enables voice. Rendering the owner base is `kubectl kustomize deploy/web`;
 Ali renders his complete platform overlay after inserting both image mappings.
 This handoff does not deploy either image or change the shared cluster.
+
+
+## Hosted detector overlay
+
+The optional [stock-image cluster overlay](cluster/README.md) supersedes the static-only vision boundary above. It includes a loopback CPU YOLO sidecar, checksum-verified model download and authenticated nginx `/camera/detect`. The base image keeps 503 until its optional include is mounted. Browser role credentials are verified by the incident API before the JPEG reaches the detector; no vendor key is used for vision. Source and credential changes cancel existing inference and stop camera tracks.

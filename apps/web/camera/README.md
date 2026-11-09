@@ -31,7 +31,7 @@ Boxes follow the preceding sampled frame when seeking or looping. The zone divid
 
 ## Deployment boundary
 
-The web Docker image includes the clip and recorded results. Same-origin camera permission is enabled, but browsers still ask the user; a public camera preview requires HTTPS. Production nginx deliberately returns 503 for `/camera/*`: the local inference server is not deployed or exposed automatically. Wire an authenticated inference service separately before claiming live inference on the deployed host. The page reports this limitation and retains the bundled recording. No image frames are sent to the incident API, Elasticsearch or telemetry.
+The web Docker image includes the clip and recorded results. Same-origin camera permission is enabled, but browsers still ask the user; a public camera preview requires HTTPS. The static image returns 503 for `/camera/*`. The optional `deploy/web/cluster` overlay adds a loopback-only detector and mounts authenticated nginx routes. It verifies the role bearer through the incident API’s status endpoint before accepting inference; producer identities are denied. Remote mode explicitly tells users that sampled frames go to the cluster, while the whole video stays in their browser. See the cluster deployment README for release and rollback instructions. No image frames are sent to the incident API, Elasticsearch or telemetry.
 
 The separate edge service remains responsible for calibrated count signals and the 30-second overflow / 60-second recovery rules. No edge-owned files changed. The video hub also links to the board, role inbox/optional voice, saved History, projector QR and existing stage mic/caption-monitor page. Those links do not make the caption fixture a live transcription integration.
 

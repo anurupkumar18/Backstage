@@ -4,7 +4,7 @@ Branch from the bootstrap on `main` and use `luke/<feature>`, `kunj/<feature>`, 
 
 Read the [team updates](docs/handoffs/README.md) before starting or resuming work. Append a lane handoff and include it in every push so another person or agent can pick up the work from Git.
 
-The [owner map](.github/owners.json) is the source of truth for changed paths. The PR check reads it from the base revision and checks both sides of renames. Root files and unmatched paths belong to Luke. Bootstrap reviews route to Luke until verified collaborator handles are added to the map and CODEOWNERS. Confirm each contributor has write access before enabling their lane. The edge lane is reserved until an owner is assigned.
+The [owner map](.github/owners.json) is the source of truth for changed paths. The PR check reads it from the base revision and checks both sides of renames. Root files and unmatched paths belong to Luke. Luke, Ali, and Kunj share GitHub review ownership through [.github/CODEOWNERS](.github/CODEOWNERS). Each contributor's branch and changed paths are checked against their assigned lane. The edge lane is reserved until an owner is assigned.
 
 | Lane | Paths |
 | --- | --- |

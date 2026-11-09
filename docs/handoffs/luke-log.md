@@ -57,3 +57,11 @@
 - **Verified** · make check and make check-api passed. The opt-in test_real_simulator_fails_over_after_human_acceptance passed against Ali's simulator at 61f7062 over local HTTP and confirmed all three PDF files existed. Local checkpoint tests covered restart, a retried reroute, and withheld closure until PDF proof matched.
 - **Open** · Point the deployed badge simulator and incident API at each other for the combined Kubernetes rehearsal. Ali's service diagnosis uses mock mode pending a Radar service token.
 - **Reviewed** · main at 2555f30, ali/badge-simulator at 6595659, ali/badge-k8s at 61f7062, and agent-board at ee392fa.
+
+## 2026-11-09 — Shared GitHub review ownership
+
+- **Branch** · main after PR #5.
+- **Changes** · Added Luke, Ali, and Kunj as code owners for the whole repo. Bound Ali and Kunj to their verified GitHub accounts in the changed-path check.
+- **Impact** · GitHub can route code-owner reviews to the whole team. Ali's and Kunj's feature PRs can pass the existing check for their assigned paths.
+- **Verified** · Confirmed write access for both collaborators through GitHub, checked the CODEOWNERS rule against the collaborator list, and ran the changed-path check against Ali's badge Kubernetes branch.
+- **Reviewed** · main at b604095, ali/badge-k8s at 408d198, ali/badge-simulator at e137f36, and agent-board at d3899a9.

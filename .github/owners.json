@@ -3,11 +3,11 @@
   "lanes": {
     "luke": {"github_login": "lukeeskinner", "paths": []},
     "ali": {
-      "github_login": null,
+      "github_login": "AhmedShAli24",
       "paths": ["services/badge-simulator/", "deploy/platform/", "deploy/badge/", "docs/radar/"]
     },
     "kunj": {
-      "github_login": null,
+      "github_login": "rathodkunj2005",
       "paths": ["apps/web/", "observability/", "deploy/web/", "deploy/dash0/", "docs/demo/"]
     },
     "edge": {"github_login": null, "paths": ["services/cam-edge/"]}

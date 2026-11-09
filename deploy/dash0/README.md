@@ -1,3 +1,52 @@
 # dash0
 
-Collector and Dash0 manifests. Owner: Kunj.
+The collector is the only workload that holds a Dash0 credential. Everything here either runs it or describes what Dash0 should show. Owner: Kunj.
+
+## Files
+
+| File | What | Applied by |
+| --- | --- | --- |
+| `kustomization.yaml` | Collector base: ConfigMap, Deployment, Service `otel-collector` (4317 gRPC, 4318 HTTP, 13133 health). No namespace; the platform overlay sets it. | Ali's overlay, or `kubectl apply -n <ns> -k deploy/dash0` |
+| `collector-configmap.yaml` | Byte copy of `observability/otel-collector.yaml` | via kustomization |
+| `dash0-secret.example.yaml` | Placeholder Secret `dash0-credentials` (keys `DASH0_OTLP_ENDPOINT`, `DASH0_AUTH_TOKEN`, optional `DASH0_DATASET`). Not in the kustomization. | Create the real one with `kubectl create secret` (command in the file) |
+| `slo-check-rules.yaml` | `PrometheusRule` check rules for the high-priority SLO | Dash0 operator, only if a `Dash0Monitoring` resource exists in the namespace |
+| `dashboard-incident-timing.yaml` | `PersesDashboard` for the four timing histograms and three SLO ratios | Dash0 operator, or `dash0 dashboards create -f` |
+| `metrics.md` | Metric names, attributes, SLO outcome rules, PromQL sheet | Luke implements the emitter |
+
+Regenerate the ConfigMap after editing the collector config, and check drift:
+
+```sh
+python3 -c "import yaml;print(yaml.safe_load(open('deploy/dash0/collector-configmap.yaml'))['data']['config.yaml']==open('observability/otel-collector.yaml').read())"
+```
+
+The rules and dashboard are not in the kustomization. Their CRDs (`monitoring.coreos.com`, `perses.dev`) only exist where the Dash0 operator or the Prometheus or Perses operators are installed. Ali confirms whether the demo cluster has them. Without them, paste the PromQL from `metrics.md` into the Dash0 UI.
+
+## Evidence the handoff requires
+
+Save both to `docs/demo/evidence/`, and link them in the PR and the demo runbook.
+
+### One trace link
+
+1. Run one overflow incident end to end against the deployed stack. Note its `incident_id` and `trace_id`; the API returns `trace_id` on the incident.
+2. In Dash0, open Tracing and filter `service.name = incident-api` with attribute `incident.id = <incident_id>`, or paste the `trace_id`.
+3. Confirm the trace shows the `web` fetch span (browser `traceparent`), API ingress, state transition spans with `incident.id` and `event.id`, and the dispatch and ack hops.
+4. Copy the trace's share link and take a screenshot. Record the date, incident ID and which spans are present in `docs/demo/evidence/trace.md`.
+
+### One real bug investigation (Dash0 MCP or Agent0)
+
+The bug has to be real, not the staged mic or Station A outage. Good candidates: a 409 storm, a missing span link, a slow Elasticsearch call, or a collector export error.
+
+1. When it happens, ask Agent0 in Dash0, or a coding agent with the Dash0 MCP server connected, something like "why did `POST /api/v1/incidents/{id}/actions` return 409 between 14:05 and 14:10", scoped to the `incident-api` service.
+2. Save the question, the tool calls or Agent0 steps, the trace and log links it cites, the root cause, and the fix commit or PR to `docs/demo/evidence/dash0-investigation.md`.
+3. Keep tokens and caption text out of the saved transcript.
+
+## Not verified here
+
+- The manifests were checked offline and have not been applied to a cluster. Run from this directory:
+  - `docker run --rm -v "$PWD":/k:ro registry.k8s.io/kustomize/kustomize:v5.6.0 build /k | docker run --rm -i ghcr.io/yannh/kubeconform:v0.7.0 -strict -summary -` validates ConfigMap, Deployment and Service.
+  - kubeconform with the datreeio CRDs-catalog schema location validates `slo-check-rules.yaml`.
+  - No public schema for `PersesDashboard` was found, so it was only YAML-parsed.
+- No Dash0 org was available. The ingest header format, check rules and dashboard follow Dash0's docs and have not been exercised.
+- The Dash0 MCP was not loaded in the session that wrote this.
+
+Open question: does the demo namespace already run the Dash0 operator with a `Dash0Monitoring` resource, or do the SLO rules have to be created through the Dash0 UI or CLI?

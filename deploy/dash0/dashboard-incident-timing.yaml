@@ -1,0 +1,172 @@
+# Dash0 dashboard as a Perses resource, following the structure in Dash0's "Manage dashboards as code" docs.
+# Apply with the Dash0 operator (kubectl apply) or: dash0 dashboards create -f dashboard-incident-timing.yaml
+apiVersion: perses.dev/v1alpha1
+kind: PersesDashboard
+metadata:
+  name: backstage-incident-timing
+spec:
+  display:
+    name: Backstage incident timing and SLO
+  datasources:
+    default:
+      name: default
+      plugin:
+        kind: PrometheusDataSource
+  layouts:
+    - kind: Grid
+      spec:
+        items:
+          - x: 0
+            "y": 0
+            width: 8
+            height: 8
+            content:
+              $ref: "#/spec/panels/slo_joint"
+          - x: 8
+            "y": 0
+            width: 8
+            height: 8
+            content:
+              $ref: "#/spec/panels/slo_ack"
+          - x: 16
+            "y": 0
+            width: 8
+            height: 8
+            content:
+              $ref: "#/spec/panels/slo_resolve"
+          - x: 0
+            "y": 8
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/detection_delay"
+          - x: 12
+            "y": 8
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/dispatch_delay"
+          - x: 0
+            "y": 16
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/acceptance_delay"
+          - x: 12
+            "y": 16
+            width: 12
+            height: 8
+            content:
+              $ref: "#/spec/panels/resolution_duration"
+  panels:
+    slo_joint:
+      kind: Panel
+      spec:
+        display:
+          name: High priority, ack <= 60 s and resolved <= 5 min (% met, 1 h, target 90)
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: >-
+                        100 * sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="joint", slo_outcome="met"}[1h]))
+                        / sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="joint"}[1h]))
+    slo_ack:
+      kind: Panel
+      spec:
+        display:
+          name: High priority, human ack <= 60 s from detection (% met, 1 h)
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: >-
+                        100 * sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="ack_60s", slo_outcome="met"}[1h]))
+                        / sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="ack_60s"}[1h]))
+    slo_resolve:
+      kind: Panel
+      spec:
+        display:
+          name: High priority, verified resolution <= 5 min from detection (% met, 1 h)
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: >-
+                        100 * sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="resolve_300s", slo_outcome="met"}[1h]))
+                        / sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="resolve_300s"}[1h]))
+    detection_delay:
+      kind: Panel
+      spec:
+        display:
+          name: First evidence to detection, p90 seconds by type and priority
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: histogram_quantile(0.9, sum by (incident_type, incident_priority) (rate({otel_metric_name="backstage.incident.detection.delay", otel_metric_type="histogram"}[5m])))
+    dispatch_delay:
+      kind: Panel
+      spec:
+        display:
+          name: Detection to first dispatch, p90 seconds by type and priority
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: histogram_quantile(0.9, sum by (incident_type, incident_priority) (rate({otel_metric_name="backstage.incident.dispatch.delay", otel_metric_type="histogram"}[5m])))
+    acceptance_delay:
+      kind: Panel
+      spec:
+        display:
+          name: First dispatch to first human acceptance, p90 seconds by type and priority
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: histogram_quantile(0.9, sum by (incident_type, incident_priority) (rate({otel_metric_name="backstage.incident.acceptance.delay", otel_metric_type="histogram"}[5m])))
+    resolution_duration:
+      kind: Panel
+      spec:
+        display:
+          name: Detection to verified resolution, p90 seconds by type and priority
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: histogram_quantile(0.9, sum by (incident_type, incident_priority) (rate({otel_metric_name="backstage.incident.resolution.duration", otel_metric_type="histogram"}[5m])))

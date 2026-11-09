@@ -1,0 +1,60 @@
+# otel-collector: OTLP in on 4317 (gRPC) and 4318 (HTTP), Dash0 out over OTLP/gRPC.
+# Env: DASH0_OTLP_ENDPOINT (host:port from Dash0 onboarding), DASH0_AUTH_TOKEN, DASH0_DATASET,
+# OTEL_CORS_ALLOWED_ORIGIN (the web origin that posts browser spans to /v1/traces).
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - ${env:OTEL_CORS_ALLOWED_ORIGIN:-http://localhost:5173}
+          allowed_headers:
+            - content-type
+          max_age: 600
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  attributes/scrub:
+    actions:
+      - key: http.request.header.authorization
+        action: delete
+      - key: http.request.header.cookie
+        action: delete
+      - key: http.request.header.idempotency-key
+        action: delete
+  batch:
+    send_batch_size: 512
+    timeout: 2s
+
+exporters:
+  otlp/dash0:
+    endpoint: ${env:DASH0_OTLP_ENDPOINT}
+    headers:
+      Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+      Dash0-Dataset: ${env:DASH0_DATASET:-default}
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/scrub, batch]
+      exporters: [otlp/dash0]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/dash0]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/scrub, batch]
+      exporters: [otlp/dash0]

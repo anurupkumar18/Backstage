@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backstage signal v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "signal_id",
+    "source_id",
+    "room_id",
+    "occurred_at",
+    "kind",
+    "data"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "signal_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "room_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+]00:00)$"
+    },
+    "kind": {
+      "enum": [
+        "zone_count",
+        "audio_input_lost",
+        "audio_input_restored",
+        "caption_stale",
+        "caption_line",
+        "badge_health",
+        "badge_job_complete",
+        "human_report"
+      ]
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "kind": {
+          "const": "zone_count"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "zone",
+            "count",
+            "threshold"
+          ],
+          "properties": {
+            "zone": {
+              "enum": [
+                "seating",
+                "door",
+                "queue"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "threshold": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "audio_input_lost"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "stage_id",
+            "trigger"
+          ],
+          "properties": {
+            "stage_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "trigger": {
+              "enum": [
+                "device",
+                "manual"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "audio_input_restored"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "stage_id",
+            "trigger"
+          ],
+          "properties": {
+            "stage_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "trigger": {
+              "enum": [
+                "device",
+                "manual"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "caption_stale"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "stage_id"
+          ],
+          "properties": {
+            "stage_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "caption_line"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "stage_id",
+            "line_seq"
+          ],
+          "properties": {
+            "stage_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "line_seq": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "badge_health"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "station_id",
+            "status",
+            "oldest_pending_age_s",
+            "pending_job_ids"
+          ],
+          "properties": {
+            "station_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "status": {
+              "enum": [
+                "healthy",
+                "offline"
+              ]
+            },
+            "oldest_pending_age_s": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pending_job_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "badge_job_complete"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "station_id",
+            "job_id",
+            "pdf_ref"
+          ],
+          "properties": {
+            "station_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "job_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "pdf_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "human_report"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "category",
+            "summary"
+          ],
+          "properties": {
+            "category": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

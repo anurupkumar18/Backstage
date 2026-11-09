@@ -1,0 +1,900 @@
+openapi: 3.1.0
+info:
+  title: Backstage
+  version: 1.0.0
+  description: Conference incident API and internal badge-control contract.
+servers:
+- url: http://localhost:8000
+  description: Local incident API
+security:
+- bearerToken: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: API liveness
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+      security: []
+  /readyz:
+    get:
+      operationId: ready
+      summary: Check readiness of the configured incident store
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: Store unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error503'
+      security: []
+  /api/v1/signals:
+    post:
+      operationId: ingestSignal
+      summary: Accept a scoped signal, deduplicating retries by signal ID
+      responses:
+        '202':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignalAccepted'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error409'
+        '422':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error422'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Signal'
+  /api/v1/status:
+    get:
+      operationId: getStatus
+      summary: Read sanitized attendee and projector status
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStatus'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+  /api/v1/incidents:
+    get:
+      operationId: listIncidents
+      summary: List incidents in the reader's scope
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentsPage'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+  /api/v1/incidents/{id}:
+    get:
+      operationId: getIncident
+      summary: Read an incident and actor-specific allowed actions
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '404':
+          description: Not found or outside the reader's scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+  /api/v1/incidents/{id}/events:
+    get:
+      operationId: listIncidentEvents
+      summary: Read scoped protocol events in sequence order
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsPage'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '404':
+          description: Not found or outside the reader's scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+  /api/v1/incidents/{id}/actions:
+    post:
+      operationId: applyIncidentAction
+      summary: Apply a human action with optimistic version and idempotency checks
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '404':
+          description: Not found or outside the reader's scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error409'
+        '422':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error422'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Action'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+  /internal/radar/diagnose:
+    post:
+      operationId: diagnoseStation
+      summary: Read-only scoped Radar diagnosis
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: ./badge.v1.schema.json#/$defs/diagnose_response
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '422':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error422'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./badge.v1.schema.json#/$defs/diagnose_request
+      servers:
+      - url: http://localhost:8090
+        description: Internal badge-control
+      security:
+      - badgeServiceToken: []
+  /internal/badges/reroute:
+    post:
+      operationId: rerouteBadges
+      summary: Enqueue the same logical jobs at the replacement station
+      responses:
+        '202':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: ./badge.v1.schema.json#/$defs/reroute_response
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error409'
+        '422':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error422'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./badge.v1.schema.json#/$defs/reroute_request
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      servers:
+      - url: http://localhost:8090
+        description: Internal badge-control
+      security:
+      - badgeServiceToken: []
+  /internal/badges/jobs/{job_id}:
+    get:
+      operationId: getBadgeJob
+      summary: Read job completion and stable PDF reference
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: ./badge.v1.schema.json#/$defs/job_status
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '404':
+          description: Not found or outside the reader's scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      servers:
+      - url: http://localhost:8090
+        description: Internal badge-control
+      security:
+      - badgeServiceToken: []
+components:
+  securitySchemes:
+    bearerToken:
+      type: http
+      scheme: bearer
+    badgeServiceToken:
+      type: http
+      scheme: bearer
+  schemas:
+    Health:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          enum:
+          - ok
+      additionalProperties: false
+    Signal:
+      $ref: ./signal.v1.schema.json
+    SignalAccepted:
+      type: object
+      required:
+      - signal_id
+      - incident_id
+      - deduplicated
+      properties:
+        signal_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        incident_id:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 128
+          - type: 'null'
+        deduplicated:
+          type: boolean
+      additionalProperties: false
+    PublicStatus:
+      type: object
+      required:
+      - rooms
+      - sessions
+      properties:
+        rooms:
+          type: array
+          items:
+            type: object
+            required:
+            - room_id
+            - label
+            - status
+            - accessibility_status
+            properties:
+              room_id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              label:
+                type: string
+                minLength: 1
+                maxLength: 240
+              status:
+                enum:
+                - normal
+                - affected
+                - recovering
+              accessibility_status:
+                anyOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 240
+                - type: 'null'
+            additionalProperties: false
+        sessions:
+          type: array
+          items:
+            type: object
+            required:
+            - room_id
+            - label
+            - status
+            - accessibility_status
+            - session_id
+            properties:
+              room_id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              label:
+                type: string
+                minLength: 1
+                maxLength: 240
+              status:
+                enum:
+                - normal
+                - affected
+                - recovering
+              accessibility_status:
+                anyOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 240
+                - type: 'null'
+              session_id:
+                type: string
+                minLength: 1
+                maxLength: 128
+            additionalProperties: false
+      additionalProperties: false
+    Incident:
+      type: object
+      required:
+      - id
+      - type
+      - room_id
+      - session_id
+      - priority
+      - state
+      - version
+      - updated_at
+      - summary
+      - plan
+      - assignment
+      - verification
+      - allowed_actions
+      - trace_id
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        type:
+          enum:
+          - overflow
+          - stage_av
+          - badge_stall
+          - reported_problem
+        room_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        session_id:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 128
+          - type: 'null'
+        priority:
+          enum:
+          - normal
+          - high
+        state:
+          enum:
+          - detected
+          - triaged
+          - plan_proposed
+          - approved
+          - dispatched
+          - accepted
+          - verifying
+          - resolved
+          - escalated
+        version:
+          type: integer
+          minimum: 1
+        updated_at:
+          type: string
+          format: date-time
+          pattern: (Z|[+]00:00)$
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        plan:
+          anyOf:
+          - type: object
+            required:
+            - id
+            - summary
+            properties:
+              id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              summary:
+                type: string
+                minLength: 1
+                maxLength: 2000
+            additionalProperties: false
+          - type: 'null'
+        assignment:
+          anyOf:
+          - type: object
+            required:
+            - id
+            - assignee_id
+            - domain
+            properties:
+              id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              assignee_id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              domain:
+                enum:
+                - venue
+                - av
+                - it
+            additionalProperties: false
+          - type: 'null'
+        verification:
+          type: object
+          required:
+          - status
+          - summary
+          properties:
+            status:
+              enum:
+              - pending
+              - passed
+              - failed
+            summary:
+              anyOf:
+              - type: string
+                minLength: 1
+                maxLength: 2000
+              - type: 'null'
+          additionalProperties: false
+        allowed_actions:
+          type: array
+          items:
+            enum:
+            - approve
+            - ack
+            - handoff
+          uniqueItems: true
+        trace_id:
+          anyOf:
+          - type: string
+            pattern: ^(?!0{32}$)[0-9a-f]{32}$
+          - type: 'null'
+      additionalProperties: false
+    ProtocolEvent:
+      $ref: ./protocol.v1.schema.json
+    Action:
+      oneOf:
+      - type: object
+        required:
+        - action
+        - expected_version
+        - payload
+        properties:
+          action:
+            const: approve
+          expected_version:
+            type: integer
+            minimum: 1
+          payload:
+            type: object
+            required:
+            - plan_id
+            properties:
+              plan_id:
+                type: string
+                minLength: 1
+                maxLength: 128
+            additionalProperties: false
+        additionalProperties: false
+      - type: object
+        required:
+        - action
+        - expected_version
+        - payload
+        properties:
+          action:
+            const: ack
+          expected_version:
+            type: integer
+            minimum: 1
+          payload:
+            type: object
+            required:
+            - assignment_id
+            - decision
+            properties:
+              assignment_id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              decision:
+                enum:
+                - accepted
+                - declined
+            additionalProperties: false
+        additionalProperties: false
+      - type: object
+        required:
+        - action
+        - expected_version
+        - payload
+        properties:
+          action:
+            const: handoff
+          expected_version:
+            type: integer
+            minimum: 1
+          payload:
+            type: object
+            required:
+            - assignment_id
+            - reason
+            properties:
+              assignment_id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              reason:
+                type: string
+                minLength: 1
+                maxLength: 240
+            additionalProperties: false
+        additionalProperties: false
+    IncidentsPage:
+      type: object
+      required:
+      - items
+      - next_cursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incident'
+        next_cursor:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 128
+          - type: 'null'
+      additionalProperties: false
+    EventsPage:
+      type: object
+      required:
+      - items
+      - next_cursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProtocolEvent'
+        next_cursor:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 128
+          - type: 'null'
+      additionalProperties: false
+    Error401:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              enum:
+              - unauthorized
+            message:
+              type: string
+              minLength: 1
+              maxLength: 240
+          additionalProperties: false
+      additionalProperties: false
+    Error403:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              enum:
+              - forbidden
+            message:
+              type: string
+              minLength: 1
+              maxLength: 240
+          additionalProperties: false
+      additionalProperties: false
+    Error404:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              enum:
+              - not_found
+            message:
+              type: string
+              minLength: 1
+              maxLength: 240
+          additionalProperties: false
+      additionalProperties: false
+    Error409:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              enum:
+              - stale_version
+              - invalid_transition
+              - reservation_conflict
+              - idempotency_conflict
+            message:
+              type: string
+              minLength: 1
+              maxLength: 240
+          additionalProperties: false
+      additionalProperties: false
+    Error422:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              enum:
+              - invalid_payload
+            message:
+              type: string
+              minLength: 1
+              maxLength: 240
+          additionalProperties: false
+      additionalProperties: false
+    Error503:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              enum:
+              - unavailable
+            message:
+              type: string
+              minLength: 1
+              maxLength: 240
+          additionalProperties: false
+      additionalProperties: false

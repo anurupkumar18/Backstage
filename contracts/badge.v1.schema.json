@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backstage internal badge payloads v1",
+  "$defs": {
+    "diagnose_request": {
+      "type": "object",
+      "required": [
+        "incident_id",
+        "station_id"
+      ],
+      "properties": {
+        "incident_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "station_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnose_response": {
+      "type": "object",
+      "required": [
+        "station_id",
+        "mode",
+        "diagnosis",
+        "evidence_refs"
+      ],
+      "properties": {
+        "station_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "mode": {
+          "enum": [
+            "radar",
+            "mock"
+          ]
+        },
+        "diagnosis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "reroute_request": {
+      "type": "object",
+      "required": [
+        "incident_id",
+        "from_station_id",
+        "to_station_id",
+        "job_ids"
+      ],
+      "properties": {
+        "incident_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "from_station_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "to_station_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "job_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "reroute_response": {
+      "type": "object",
+      "required": [
+        "accepted_job_ids"
+      ],
+      "properties": {
+        "accepted_job_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "job_status": {
+      "type": "object",
+      "required": [
+        "job_id",
+        "station_id",
+        "status",
+        "pdf_ref"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "station_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "complete"
+          ]
+        },
+        "pdf_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "status": {
+            "const": "complete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "pdf_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "pdf_ref": {
+            "const": null
+          }
+        }
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/diagnose_request"
+    },
+    {
+      "$ref": "#/$defs/diagnose_response"
+    },
+    {
+      "$ref": "#/$defs/reroute_request"
+    },
+    {
+      "$ref": "#/$defs/reroute_response"
+    },
+    {
+      "$ref": "#/$defs/job_status"
+    }
+  ]
+}

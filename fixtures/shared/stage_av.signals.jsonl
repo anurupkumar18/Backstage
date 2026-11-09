@@ -1,0 +1,4 @@
+{"schema_version": 1, "signal_id": "stage-b-audio_input_lost-01", "kind": "audio_input_lost", "source_id": "stage-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:00Z", "data": {"stage_id": "stage-b", "trigger": "device"}}
+{"schema_version": 1, "signal_id": "stage-b-caption_stale-02", "kind": "caption_stale", "source_id": "stage-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:15Z", "data": {"stage_id": "stage-b"}}
+{"schema_version": 1, "signal_id": "stage-b-audio_input_restored-03", "kind": "audio_input_restored", "source_id": "stage-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:45Z", "data": {"stage_id": "stage-b", "trigger": "device"}}
+{"schema_version": 1, "signal_id": "stage-b-caption_line-04", "kind": "caption_line", "source_id": "stage-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:01:00Z", "data": {"stage_id": "stage-b", "line_seq": 42}}

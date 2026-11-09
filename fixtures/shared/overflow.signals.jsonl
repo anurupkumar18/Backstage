@@ -1,0 +1,10 @@
+{"schema_version": 1, "signal_id": "cam-b-zone_count-00", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:00Z", "data": {"zone": "seating", "count": 30, "threshold": 30}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-01", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:00Z", "data": {"zone": "door", "count": 8, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-02", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:15Z", "data": {"zone": "door", "count": 8, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-03", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:30Z", "data": {"zone": "door", "count": 8, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-04", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:00:45Z", "data": {"zone": "door", "count": 8, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-05", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:01:00Z", "data": {"zone": "door", "count": 3, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-06", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:01:15Z", "data": {"zone": "door", "count": 2, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-07", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:01:30Z", "data": {"zone": "door", "count": 2, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-08", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:01:45Z", "data": {"zone": "door", "count": 1, "threshold": 5}}
+{"schema_version": 1, "signal_id": "cam-b-zone_count-09", "kind": "zone_count", "source_id": "cam-b", "room_id": "room-b", "occurred_at": "2026-11-09T19:02:00Z", "data": {"zone": "door", "count": 1, "threshold": 5}}

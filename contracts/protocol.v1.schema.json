@@ -1,0 +1,452 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backstage protocol event v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "incident_id",
+    "sequence",
+    "type",
+    "occurred_at",
+    "actor",
+    "state_from",
+    "state_to",
+    "payload",
+    "trace_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "incident_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "type": {
+      "enum": [
+        "raise",
+        "claim",
+        "propose",
+        "approve",
+        "dispatch",
+        "ack",
+        "handoff",
+        "verify",
+        "close",
+        "escalate"
+      ]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+]00:00)$"
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "tier"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "agent",
+            "system"
+          ]
+        },
+        "tier": {
+          "anyOf": [
+            {
+              "enum": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "state_from": {
+      "anyOf": [
+        {
+          "enum": [
+            "detected",
+            "triaged",
+            "plan_proposed",
+            "approved",
+            "dispatched",
+            "accepted",
+            "verifying",
+            "resolved",
+            "escalated"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "state_to": {
+      "enum": [
+        "detected",
+        "triaged",
+        "plan_proposed",
+        "approved",
+        "dispatched",
+        "accepted",
+        "verifying",
+        "resolved",
+        "escalated"
+      ]
+    },
+    "payload": {
+      "type": "object"
+    },
+    "trace_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?!0{32}$)[0-9a-f]{32}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "type": {
+          "const": "raise"
+        },
+        "state_from": {
+          "const": null
+        },
+        "state_to": {
+          "const": "detected"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "signal_id"
+          ],
+          "properties": {
+            "signal_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "claim"
+        },
+        "state_from": {
+          "const": "detected"
+        },
+        "state_to": {
+          "const": "triaged"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "domain"
+          ],
+          "properties": {
+            "domain": {
+              "enum": [
+                "venue",
+                "av",
+                "it"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "propose"
+        },
+        "state_from": {
+          "const": "triaged"
+        },
+        "state_to": {
+          "const": "plan_proposed"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "plan_id"
+          ],
+          "properties": {
+            "plan_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "approve"
+        },
+        "state_from": {
+          "const": "plan_proposed"
+        },
+        "state_to": {
+          "const": "approved"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "plan_id"
+          ],
+          "properties": {
+            "plan_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "dispatch"
+        },
+        "state_from": {
+          "const": "approved"
+        },
+        "state_to": {
+          "const": "dispatched"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "assignment_id"
+          ],
+          "properties": {
+            "assignment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "ack"
+        },
+        "state_from": {
+          "const": "dispatched"
+        },
+        "state_to": {
+          "const": "accepted"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "assignment_id",
+            "decision"
+          ],
+          "properties": {
+            "assignment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "decision": {
+              "enum": [
+                "accepted",
+                "declined"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "handoff"
+        },
+        "state_from": {
+          "enum": [
+            "dispatched",
+            "accepted"
+          ]
+        },
+        "state_to": {
+          "const": "approved"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "assignment_id",
+            "reason"
+          ],
+          "properties": {
+            "assignment_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "verify"
+        },
+        "state_from": {
+          "enum": [
+            "accepted",
+            "verifying"
+          ]
+        },
+        "state_to": {
+          "const": "verifying"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "evidence_signal_ids"
+          ],
+          "properties": {
+            "evidence_signal_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "close"
+        },
+        "state_from": {
+          "const": "verifying"
+        },
+        "state_to": {
+          "const": "resolved"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "evidence_signal_ids"
+          ],
+          "properties": {
+            "evidence_signal_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "uniqueItems": true,
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "escalate"
+        },
+        "state_from": {
+          "enum": [
+            "detected",
+            "triaged",
+            "plan_proposed",
+            "approved",
+            "dispatched",
+            "accepted",
+            "verifying"
+          ]
+        },
+        "state_to": {
+          "const": "escalated"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

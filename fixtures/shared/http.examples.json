@@ -1,0 +1,1055 @@
+[
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/healthz",
+    "path": "/healthz",
+    "status": 200,
+    "response": {
+      "status": "ok"
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/readyz",
+    "path": "/readyz",
+    "status": 200,
+    "response": {
+      "status": "ok"
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "POST",
+    "route": "/api/v1/signals",
+    "path": "/api/v1/signals",
+    "status": 202,
+    "response": {
+      "signal_id": "cam-b-zone_count-03",
+      "incident_id": "inc-overflow-room-b",
+      "deduplicated": false
+    },
+    "request": {
+      "schema_version": 1,
+      "signal_id": "cam-b-zone_count-03",
+      "kind": "zone_count",
+      "source_id": "cam-b",
+      "room_id": "room-b",
+      "occurred_at": "2026-11-09T19:00:30Z",
+      "data": {
+        "zone": "door",
+        "count": 8,
+        "threshold": 5
+      }
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/api/v1/status",
+    "path": "/api/v1/status",
+    "status": 200,
+    "response": {
+      "rooms": [
+        {
+          "room_id": "room-b",
+          "label": "Room B",
+          "status": "affected",
+          "accessibility_status": null
+        }
+      ],
+      "sessions": []
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/api/v1/incidents",
+    "path": "/api/v1/incidents",
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "id": "inc-overflow-room-b",
+          "type": "overflow",
+          "room_id": "room-b",
+          "session_id": null,
+          "priority": "high",
+          "state": "plan_proposed",
+          "version": 3,
+          "updated_at": "2026-11-09T19:00:30Z",
+          "summary": "Room B overflow",
+          "plan": {
+            "id": "plan-overflow-1",
+            "summary": "Send venue staff to Room B and hold entry until the door queue clears."
+          },
+          "assignment": null,
+          "verification": {
+            "status": "pending",
+            "summary": null
+          },
+          "allowed_actions": [
+            "approve"
+          ],
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/api/v1/incidents/{id}",
+    "path": "/api/v1/incidents/inc-overflow-room-b",
+    "status": 200,
+    "response": {
+      "id": "inc-overflow-room-b",
+      "type": "overflow",
+      "room_id": "room-b",
+      "session_id": null,
+      "priority": "high",
+      "state": "plan_proposed",
+      "version": 3,
+      "updated_at": "2026-11-09T19:00:30Z",
+      "summary": "Room B overflow",
+      "plan": {
+        "id": "plan-overflow-1",
+        "summary": "Send venue staff to Room B and hold entry until the door queue clears."
+      },
+      "assignment": null,
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [
+        "approve"
+      ],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/api/v1/incidents/{id}/events",
+    "path": "/api/v1/incidents/inc-overflow-room-b/events",
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "schema_version": 1,
+          "event_id": "inc-overflow-room-b-1",
+          "incident_id": "inc-overflow-room-b",
+          "sequence": 1,
+          "type": "raise",
+          "occurred_at": "2026-11-09T19:00:30Z",
+          "actor": {
+            "id": "incident-api",
+            "kind": "system",
+            "tier": null
+          },
+          "state_from": null,
+          "state_to": "detected",
+          "payload": {
+            "signal_id": "cam-b-zone_count-03"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        },
+        {
+          "schema_version": 1,
+          "event_id": "inc-overflow-room-b-2",
+          "incident_id": "inc-overflow-room-b",
+          "sequence": 2,
+          "type": "claim",
+          "occurred_at": "2026-11-09T19:00:30Z",
+          "actor": {
+            "id": "venue-worker",
+            "kind": "agent",
+            "tier": 2
+          },
+          "state_from": "detected",
+          "state_to": "triaged",
+          "payload": {
+            "domain": "venue"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        },
+        {
+          "schema_version": 1,
+          "event_id": "inc-overflow-room-b-3",
+          "incident_id": "inc-overflow-room-b",
+          "sequence": 3,
+          "type": "propose",
+          "occurred_at": "2026-11-09T19:00:30Z",
+          "actor": {
+            "id": "venue-worker",
+            "kind": "agent",
+            "tier": 2
+          },
+          "state_from": "triaged",
+          "state_to": "plan_proposed",
+          "payload": {
+            "plan_id": "plan-overflow-1"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-overflow-room-b/actions",
+    "status": 200,
+    "response": {
+      "id": "inc-overflow-room-b",
+      "type": "overflow",
+      "room_id": "room-b",
+      "session_id": null,
+      "priority": "high",
+      "state": "approved",
+      "version": 4,
+      "updated_at": "2026-11-09T19:00:30Z",
+      "summary": "Room B overflow",
+      "plan": {
+        "id": "plan-overflow-1",
+        "summary": "Send venue staff to Room B and hold entry until the door queue clears."
+      },
+      "assignment": null,
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-overflow-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-overflow-room-b-1"
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-overflow-room-b/actions",
+    "status": 403,
+    "response": {
+      "error": {
+        "code": "forbidden",
+        "message": "Organizer approval is required."
+      }
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-overflow-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-overflow-room-b-1"
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-overflow-room-b/actions",
+    "status": 409,
+    "response": {
+      "error": {
+        "code": "stale_version",
+        "message": "Refresh the incident before taking an action."
+      }
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-overflow-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-overflow-room-b-1"
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-overflow-room-b/actions",
+    "status": 200,
+    "response": {
+      "id": "inc-overflow-room-b",
+      "type": "overflow",
+      "room_id": "room-b",
+      "session_id": null,
+      "priority": "high",
+      "state": "accepted",
+      "version": 6,
+      "updated_at": "2026-11-09T19:00:30Z",
+      "summary": "Room B overflow",
+      "plan": {
+        "id": "plan-overflow-1",
+        "summary": "Send venue staff to Room B and hold entry until the door queue clears."
+      },
+      "assignment": {
+        "id": "assignment-overflow-1",
+        "assignee_id": "venue-staff-01",
+        "domain": "venue"
+      },
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [
+        "handoff"
+      ],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    },
+    "request": {
+      "action": "ack",
+      "expected_version": 5,
+      "payload": {
+        "assignment_id": "assignment-overflow-1",
+        "decision": "accepted"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "ack-inc-overflow-room-b-1"
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "GET",
+    "route": "/healthz",
+    "path": "/healthz",
+    "status": 200,
+    "response": {
+      "status": "ok"
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "GET",
+    "route": "/readyz",
+    "path": "/readyz",
+    "status": 200,
+    "response": {
+      "status": "ok"
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "POST",
+    "route": "/api/v1/signals",
+    "path": "/api/v1/signals",
+    "status": 202,
+    "response": {
+      "signal_id": "stage-b-audio_input_lost-01",
+      "incident_id": "inc-stage_av-room-b",
+      "deduplicated": false
+    },
+    "request": {
+      "schema_version": 1,
+      "signal_id": "stage-b-audio_input_lost-01",
+      "kind": "audio_input_lost",
+      "source_id": "stage-b",
+      "room_id": "room-b",
+      "occurred_at": "2026-11-09T19:00:00Z",
+      "data": {
+        "stage_id": "stage-b",
+        "trigger": "device"
+      }
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "GET",
+    "route": "/api/v1/status",
+    "path": "/api/v1/status",
+    "status": 200,
+    "response": {
+      "rooms": [
+        {
+          "room_id": "room-b",
+          "label": "Room B",
+          "status": "affected",
+          "accessibility_status": null
+        }
+      ],
+      "sessions": []
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "GET",
+    "route": "/api/v1/incidents",
+    "path": "/api/v1/incidents",
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "id": "inc-stage_av-room-b",
+          "type": "stage_av",
+          "room_id": "room-b",
+          "session_id": null,
+          "priority": "high",
+          "state": "plan_proposed",
+          "version": 3,
+          "updated_at": "2026-11-09T19:00:00Z",
+          "summary": "Stage B microphone input lost",
+          "plan": {
+            "id": "plan-stage_av-1",
+            "summary": "Send AV staff to restore the microphone input."
+          },
+          "assignment": null,
+          "verification": {
+            "status": "pending",
+            "summary": null
+          },
+          "allowed_actions": [
+            "approve"
+          ],
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "GET",
+    "route": "/api/v1/incidents/{id}",
+    "path": "/api/v1/incidents/inc-stage_av-room-b",
+    "status": 200,
+    "response": {
+      "id": "inc-stage_av-room-b",
+      "type": "stage_av",
+      "room_id": "room-b",
+      "session_id": null,
+      "priority": "high",
+      "state": "plan_proposed",
+      "version": 3,
+      "updated_at": "2026-11-09T19:00:00Z",
+      "summary": "Stage B microphone input lost",
+      "plan": {
+        "id": "plan-stage_av-1",
+        "summary": "Send AV staff to restore the microphone input."
+      },
+      "assignment": null,
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [
+        "approve"
+      ],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "GET",
+    "route": "/api/v1/incidents/{id}/events",
+    "path": "/api/v1/incidents/inc-stage_av-room-b/events",
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "schema_version": 1,
+          "event_id": "inc-stage_av-room-b-1",
+          "incident_id": "inc-stage_av-room-b",
+          "sequence": 1,
+          "type": "raise",
+          "occurred_at": "2026-11-09T19:00:00Z",
+          "actor": {
+            "id": "incident-api",
+            "kind": "system",
+            "tier": null
+          },
+          "state_from": null,
+          "state_to": "detected",
+          "payload": {
+            "signal_id": "stage-b-audio_input_lost-01"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        },
+        {
+          "schema_version": 1,
+          "event_id": "inc-stage_av-room-b-2",
+          "incident_id": "inc-stage_av-room-b",
+          "sequence": 2,
+          "type": "claim",
+          "occurred_at": "2026-11-09T19:00:00Z",
+          "actor": {
+            "id": "av-worker",
+            "kind": "agent",
+            "tier": 2
+          },
+          "state_from": "detected",
+          "state_to": "triaged",
+          "payload": {
+            "domain": "av"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        },
+        {
+          "schema_version": 1,
+          "event_id": "inc-stage_av-room-b-3",
+          "incident_id": "inc-stage_av-room-b",
+          "sequence": 3,
+          "type": "propose",
+          "occurred_at": "2026-11-09T19:00:00Z",
+          "actor": {
+            "id": "av-worker",
+            "kind": "agent",
+            "tier": 2
+          },
+          "state_from": "triaged",
+          "state_to": "plan_proposed",
+          "payload": {
+            "plan_id": "plan-stage_av-1"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-stage_av-room-b/actions",
+    "status": 200,
+    "response": {
+      "id": "inc-stage_av-room-b",
+      "type": "stage_av",
+      "room_id": "room-b",
+      "session_id": null,
+      "priority": "high",
+      "state": "approved",
+      "version": 4,
+      "updated_at": "2026-11-09T19:00:00Z",
+      "summary": "Stage B microphone input lost",
+      "plan": {
+        "id": "plan-stage_av-1",
+        "summary": "Send AV staff to restore the microphone input."
+      },
+      "assignment": null,
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-stage_av-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-stage_av-room-b-1"
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-stage_av-room-b/actions",
+    "status": 403,
+    "response": {
+      "error": {
+        "code": "forbidden",
+        "message": "Organizer approval is required."
+      }
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-stage_av-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-stage_av-room-b-1"
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-stage_av-room-b/actions",
+    "status": 409,
+    "response": {
+      "error": {
+        "code": "stale_version",
+        "message": "Refresh the incident before taking an action."
+      }
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-stage_av-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-stage_av-room-b-1"
+    }
+  },
+  {
+    "scenario": "stage_av",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-stage_av-room-b/actions",
+    "status": 200,
+    "response": {
+      "id": "inc-stage_av-room-b",
+      "type": "stage_av",
+      "room_id": "room-b",
+      "session_id": null,
+      "priority": "high",
+      "state": "accepted",
+      "version": 6,
+      "updated_at": "2026-11-09T19:00:00Z",
+      "summary": "Stage B microphone input lost",
+      "plan": {
+        "id": "plan-stage_av-1",
+        "summary": "Send AV staff to restore the microphone input."
+      },
+      "assignment": {
+        "id": "assignment-stage_av-1",
+        "assignee_id": "av-staff-01",
+        "domain": "av"
+      },
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [
+        "handoff"
+      ],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    },
+    "request": {
+      "action": "ack",
+      "expected_version": 5,
+      "payload": {
+        "assignment_id": "assignment-stage_av-1",
+        "decision": "accepted"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "ack-inc-stage_av-room-b-1"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "GET",
+    "route": "/healthz",
+    "path": "/healthz",
+    "status": 200,
+    "response": {
+      "status": "ok"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "GET",
+    "route": "/readyz",
+    "path": "/readyz",
+    "status": 200,
+    "response": {
+      "status": "ok"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "POST",
+    "route": "/api/v1/signals",
+    "path": "/api/v1/signals",
+    "status": 202,
+    "response": {
+      "signal_id": "station-b-badge_health-00",
+      "incident_id": "inc-badge_stall-room-c",
+      "deduplicated": false
+    },
+    "request": {
+      "schema_version": 1,
+      "signal_id": "station-b-badge_health-00",
+      "kind": "badge_health",
+      "source_id": "station-b",
+      "room_id": "room-c",
+      "occurred_at": "2026-11-09T19:00:00Z",
+      "data": {
+        "station_id": "station-a",
+        "status": "offline",
+        "oldest_pending_age_s": 90,
+        "pending_job_ids": [
+          "badge-job-001",
+          "badge-job-002",
+          "badge-job-003"
+        ]
+      }
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "GET",
+    "route": "/api/v1/status",
+    "path": "/api/v1/status",
+    "status": 200,
+    "response": {
+      "rooms": [
+        {
+          "room_id": "room-c",
+          "label": "Room C",
+          "status": "affected",
+          "accessibility_status": null
+        }
+      ],
+      "sessions": []
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "GET",
+    "route": "/api/v1/incidents",
+    "path": "/api/v1/incidents",
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "id": "inc-badge_stall-room-c",
+          "type": "badge_stall",
+          "room_id": "room-c",
+          "session_id": null,
+          "priority": "high",
+          "state": "plan_proposed",
+          "version": 3,
+          "updated_at": "2026-11-09T19:00:00Z",
+          "summary": "Station A badge queue stalled",
+          "plan": {
+            "id": "plan-badge_stall-1",
+            "summary": "Send IT staff to recover the three jobs on Station B."
+          },
+          "assignment": null,
+          "verification": {
+            "status": "pending",
+            "summary": null
+          },
+          "allowed_actions": [
+            "approve"
+          ],
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "GET",
+    "route": "/api/v1/incidents/{id}",
+    "path": "/api/v1/incidents/inc-badge_stall-room-c",
+    "status": 200,
+    "response": {
+      "id": "inc-badge_stall-room-c",
+      "type": "badge_stall",
+      "room_id": "room-c",
+      "session_id": null,
+      "priority": "high",
+      "state": "plan_proposed",
+      "version": 3,
+      "updated_at": "2026-11-09T19:00:00Z",
+      "summary": "Station A badge queue stalled",
+      "plan": {
+        "id": "plan-badge_stall-1",
+        "summary": "Send IT staff to recover the three jobs on Station B."
+      },
+      "assignment": null,
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [
+        "approve"
+      ],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "GET",
+    "route": "/api/v1/incidents/{id}/events",
+    "path": "/api/v1/incidents/inc-badge_stall-room-c/events",
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "schema_version": 1,
+          "event_id": "inc-badge_stall-room-c-1",
+          "incident_id": "inc-badge_stall-room-c",
+          "sequence": 1,
+          "type": "raise",
+          "occurred_at": "2026-11-09T19:00:00Z",
+          "actor": {
+            "id": "incident-api",
+            "kind": "system",
+            "tier": null
+          },
+          "state_from": null,
+          "state_to": "detected",
+          "payload": {
+            "signal_id": "station-b-badge_health-00"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        },
+        {
+          "schema_version": 1,
+          "event_id": "inc-badge_stall-room-c-2",
+          "incident_id": "inc-badge_stall-room-c",
+          "sequence": 2,
+          "type": "claim",
+          "occurred_at": "2026-11-09T19:00:00Z",
+          "actor": {
+            "id": "it-worker",
+            "kind": "agent",
+            "tier": 2
+          },
+          "state_from": "detected",
+          "state_to": "triaged",
+          "payload": {
+            "domain": "it"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        },
+        {
+          "schema_version": 1,
+          "event_id": "inc-badge_stall-room-c-3",
+          "incident_id": "inc-badge_stall-room-c",
+          "sequence": 3,
+          "type": "propose",
+          "occurred_at": "2026-11-09T19:00:00Z",
+          "actor": {
+            "id": "it-worker",
+            "kind": "agent",
+            "tier": 2
+          },
+          "state_from": "triaged",
+          "state_to": "plan_proposed",
+          "payload": {
+            "plan_id": "plan-badge_stall-1"
+          },
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-badge_stall-room-c/actions",
+    "status": 200,
+    "response": {
+      "id": "inc-badge_stall-room-c",
+      "type": "badge_stall",
+      "room_id": "room-c",
+      "session_id": null,
+      "priority": "high",
+      "state": "approved",
+      "version": 4,
+      "updated_at": "2026-11-09T19:00:00Z",
+      "summary": "Station A badge queue stalled",
+      "plan": {
+        "id": "plan-badge_stall-1",
+        "summary": "Send IT staff to recover the three jobs on Station B."
+      },
+      "assignment": null,
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-badge_stall-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-badge_stall-room-c-1"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-badge_stall-room-c/actions",
+    "status": 403,
+    "response": {
+      "error": {
+        "code": "forbidden",
+        "message": "Organizer approval is required."
+      }
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-badge_stall-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-badge_stall-room-c-1"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-badge_stall-room-c/actions",
+    "status": 409,
+    "response": {
+      "error": {
+        "code": "stale_version",
+        "message": "Refresh the incident before taking an action."
+      }
+    },
+    "request": {
+      "action": "approve",
+      "expected_version": 3,
+      "payload": {
+        "plan_id": "plan-badge_stall-1"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "approve-inc-badge_stall-room-c-1"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "POST",
+    "route": "/api/v1/incidents/{id}/actions",
+    "path": "/api/v1/incidents/inc-badge_stall-room-c/actions",
+    "status": 200,
+    "response": {
+      "id": "inc-badge_stall-room-c",
+      "type": "badge_stall",
+      "room_id": "room-c",
+      "session_id": null,
+      "priority": "high",
+      "state": "accepted",
+      "version": 6,
+      "updated_at": "2026-11-09T19:00:00Z",
+      "summary": "Station A badge queue stalled",
+      "plan": {
+        "id": "plan-badge_stall-1",
+        "summary": "Send IT staff to recover the three jobs on Station B."
+      },
+      "assignment": {
+        "id": "assignment-badge_stall-1",
+        "assignee_id": "it-staff-01",
+        "domain": "it"
+      },
+      "verification": {
+        "status": "pending",
+        "summary": null
+      },
+      "allowed_actions": [
+        "handoff"
+      ],
+      "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+    },
+    "request": {
+      "action": "ack",
+      "expected_version": 5,
+      "payload": {
+        "assignment_id": "assignment-badge_stall-1",
+        "decision": "accepted"
+      }
+    },
+    "headers": {
+      "Idempotency-Key": "ack-inc-badge_stall-room-c-1"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "POST",
+    "route": "/internal/radar/diagnose",
+    "path": "/internal/radar/diagnose",
+    "status": 200,
+    "response": {
+      "station_id": "station-a",
+      "mode": "mock",
+      "diagnosis": "Station A is offline.",
+      "evidence_refs": [
+        "mock-station-a-offline"
+      ]
+    },
+    "request": {
+      "incident_id": "inc-badge_stall-room-c",
+      "station_id": "station-a"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "POST",
+    "route": "/internal/badges/reroute",
+    "path": "/internal/badges/reroute",
+    "status": 202,
+    "response": {
+      "accepted_job_ids": [
+        "badge-job-001",
+        "badge-job-002",
+        "badge-job-003"
+      ]
+    },
+    "request": {
+      "incident_id": "inc-badge_stall-room-c",
+      "from_station_id": "station-a",
+      "to_station_id": "station-b",
+      "job_ids": [
+        "badge-job-001",
+        "badge-job-002",
+        "badge-job-003"
+      ]
+    },
+    "headers": {
+      "Idempotency-Key": "reroute-inc-badge_stall-room-c-1"
+    }
+  },
+  {
+    "scenario": "badge_stall",
+    "method": "GET",
+    "route": "/internal/badges/jobs/{job_id}",
+    "path": "/internal/badges/jobs/badge-job-001",
+    "status": 200,
+    "response": {
+      "job_id": "badge-job-001",
+      "station_id": "station-b",
+      "status": "complete",
+      "pdf_ref": "pdf-badge-job-001"
+    }
+  }
+]

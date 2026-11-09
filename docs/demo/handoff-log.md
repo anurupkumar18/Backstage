@@ -205,3 +205,11 @@
 - **Verified** · nginx configuration/auth tests run against real Linux YOLO, and CI scaffold/changed-paths were green on the previous head. Final pin/rollout evidence follows. Public HTTPS backend change was explicitly approved by the user; original route and Deployment saved for rollback. No credential fields were altered by this patch.
 
 - Release pin: c43885a9a3d72fecc67fc0a80413bae1226cc532. Actual nginx smoke returned200 with10 real person boxes immediately after25 telemetry POSTs, verifying separate budgets. Source remains published before cluster download.
+
+
+## 2026-11-09 — Fit the event CPU quota
+
+- **Branch or PR** · `kunj/hosted-vision`, deployment-only follow-up after PR25 merged at e6bbc8e.
+- **Finding** · The vcluster accepted the web Deployment, but host Pod sync rejected3 CPUs with7.4 already used against a10-core team quota. Admission supplies500m limits to each web container when omitted; both init and regular limits count toward the effective Pod budget.
+- **Change** · Cap vision at1 CPU, each Node/nginx container at250m and install-vision at1 CPU, giving an effective1.5-core Pod ceiling. The private smoke Job uses250m. Disable unused ServiceAccount token mounting. Runtime source staysc43885a9a3d72fecc67fc0a80413bae1226cc532; this change affects resource allocation only.
+- **State** · No user workloads scaled down and no Secret replaced. HTTPRoute cutover is approved but held until the deployment is healthy. API is upgrading8e61ac9 tof536b757, with single writer and projection off. Hosted smoke follows Pod readiness; no success claim before that.

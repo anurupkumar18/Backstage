@@ -64,24 +64,14 @@ export function JoinPage({ onJoin, joinedTier }: JoinPageProps) {
 
   return (
     <section className="join" aria-labelledby={joined ? doneId : titleId}>
-      <div className="join__signals" aria-hidden="true">
-        {PRESENCE_TIERS.map((tier) => (
-          <span key={tier} className="join__signal" data-tier={tier}>
-            <span className="join__signal-dot" />
-            {OPTIONS[tier].cluster}
-          </span>
-        ))}
-      </div>
-
       <div className="join__sheet">
         <p className="join__brand">BACKSTAGE</p>
 
         {joined ? (
           <div className="join__done">
             <div className="join__you" data-tier={joined} aria-hidden="true">
-              <span className="join__ring" />
-              <svg className="join__blob" viewBox="0 0 100 100" focusable="false">
-                <path d="M50 8C72 6 93 22 92 48C91 74 76 94 50 92C24 91 8 74 9 50C10 26 28 10 50 8Z" />
+              <svg className="join__blob" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" focusable="false">
+                <path d="m5 12 4 4 10-10" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <h1 id={doneId} ref={doneRef} tabIndex={-1} className="join__title">

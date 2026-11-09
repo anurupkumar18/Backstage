@@ -26,3 +26,12 @@ Live mode (`VITE_MOCK_API=false`) proxies `/api/v1` to `http://127.0.0.1:8000` (
 - 409 `stale_version` refreshes the board and asks the user to act again. Nothing retries automatically with a new version.
 - 403 shows the server message on the incident card.
 - An incident stays in verification until the API reports `resolved`.
+
+
+## Personal inbox
+
+`#/me` shows approval and assignment cards from the current token’s incident list. The single primary action comes from `allowed_actions`, and the existing intent handler preserves idempotency and refreshes stale 409 responses. Recovery reads “Verified” only after both `state=resolved` and passed evidence. Attendees read `/status` without fetching incidents; speakers see only what their session-scoped token returns.
+
+In live mode, enter a token and press Enter or **Use token**. Token drafts do not restart polling. Role/token changes discard prior cards and announcements. **Mark updates read** stores only a timestamp per role in local storage; denied storage is supported.
+
+See [frontend integration patterns](agent_docs/frontend_patterns.md) before changing route, polling or permission behavior.

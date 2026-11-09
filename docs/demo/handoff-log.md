@@ -205,3 +205,11 @@
 - **Verified** · nginx configuration/auth tests run against real Linux YOLO, and CI scaffold/changed-paths were green on the previous head. Final pin/rollout evidence follows. Public HTTPS backend change was explicitly approved by the user; original route and Deployment saved for rollback. No credential fields were altered by this patch.
 
 - Release pin: c43885a9a3d72fecc67fc0a80413bae1226cc532. Actual nginx smoke returned200 with10 real person boxes immediately after25 telemetry POSTs, verifying separate budgets. Source remains published before cluster download.
+
+## 2026-11-09 — Remove Dash0 UI links; revert unfinished guided demo
+
+- **Working change** · At Luke's explicit request, restored all uncommitted guided-demo and canyon-theme changes to main 5e90f3b. Deleted the temporary runner, route, styles, tests and reference asset; stopped the runner. Pulled team work and ignored private configuration are preserved.
+- **UI change** · Removed the Dash0 external trace link, missing-link message and provider-ingestion note from the evidence inspector. Generic trace IDs and copy remain; telemetry, collector/backend integrations and evidence search are unchanged.
+- **Verified** · Production build and five evidence inspector tests pass. Only this focused UI removal and its test expectations remain as application changes.
+- **Local data** · The interrupted real demo created Room B incident inc-overflow-b3ce9e8261814bbcb6b37f9629d027d6 in the existing local Elasticsearch checkpoint. It reached plan_proposed, with no approval or acceptance performed by this agent. Undoing code does not delete that saved record.
+- **Reviewed** · main 5e90f3b, Kunj's hosted-vision handoff, Ali deploy-web quota notes and Anurup's evidence delivery. Published on main at Luke’s request; reviewed upstream main e6bbc8e (hosted vision) and Ali deploy-web 40b2270 (public route). The UI removal does not change those integrations.

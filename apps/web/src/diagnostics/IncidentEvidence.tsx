@@ -111,26 +111,8 @@ function EvidenceScope({ incident, client, mockMode }: Props) {
     </section>
   );
 }
-function safeTraceUrl(raw: string | null): string | null {
-  if (!raw) return null;
-  try {
-    const url = new URL(raw);
-    return url.protocol === "https:" && !url.username && !url.password
-      ? url.href
-      : null;
-  } catch {
-    return null;
-  }
-}
-function Trace({
-  traceId,
-  url,
-}: {
-  traceId: string | null;
-  url: string | null;
-}) {
+function Trace({ traceId }: { traceId: string | null }) {
   const [message, setMessage] = useState("");
-  const link = safeTraceUrl(url);
   if (!traceId)
     return (
       <p className="evidence__muted">
@@ -161,17 +143,7 @@ function Trace({
         >
           Copy full trace ID
         </button>
-        {link ? (
-          <a href={link} target="_blank" rel="noreferrer">
-            Open trace in Dash0
-          </a>
-        ) : (
-          <span>Trace link not configured.</span>
-        )}
       </div>
-      <p className="evidence__muted">
-        Provider ingestion is not verified by this board.
-      </p>
       {message ? <p role="status">{message}</p> : null}
     </div>
   );
@@ -281,8 +253,6 @@ function Inspector({
     [];
   const traceId =
     selected?.trace_id ?? diag?.trace.trace_id ?? incident.trace_id;
-  const traceUrl =
-    traceId === diag?.trace.trace_id ? (diag?.trace.url ?? null) : null;
   return (
     <section
       className="evidence__inspector"
@@ -490,7 +460,7 @@ function Inspector({
           ) : null}
         </>
       ) : null}
-      <Trace key={traceId} traceId={traceId} url={traceUrl} />
+      <Trace key={traceId} traceId={traceId} />
     </section>
   );
 }

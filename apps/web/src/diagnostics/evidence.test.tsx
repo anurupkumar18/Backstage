@@ -120,12 +120,12 @@ describe("Incident evidence inspector", () => {
     expect(screen.getByText(/Origin unknown/)).toBeInTheDocument();
     expect(screen.getByText(/pending.*version 3/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Open trace in Dash0" }),
-    ).toHaveAttribute("href", diagnostic.trace.url);
+      screen.queryByRole("link", { name: "Open trace in Dash0" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText(incident.trace_id!)).toBeInTheDocument();
     expect(
-      screen.getByText(/Provider ingestion is not verified/),
-    ).toBeInTheDocument();
+      screen.queryByText(/Provider ingestion is not verified/),
+    ).not.toBeInTheDocument();
   });
   it("shows a timeline error and retries successfully without a version change", async () => {
     const user = userEvent.setup();

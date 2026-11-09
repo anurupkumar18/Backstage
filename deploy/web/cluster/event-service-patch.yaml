@@ -1,0 +1,5 @@
+# kubectl -n team-backstage patch service app --type merge --patch-file deploy/web/cluster/event-service-patch.yaml
+# Patch the existing organizer Service only; this is not a standalone resource.
+spec:
+  selector:
+    app.kubernetes.io/name: web

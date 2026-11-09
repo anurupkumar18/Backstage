@@ -8,6 +8,7 @@ spec:
     type: Recreate
   template:
     spec:
+      automountServiceAccountToken: false
       securityContext:
         fsGroup: 1000
       initContainers:
@@ -24,7 +25,7 @@ spec:
             - name: CODE_REPO
               value: lukeeskinner/Backstage
             - name: CODE_SHA
-              value: c43885a9a3d72fecc67fc0a80413bae1226cc532
+              value: 690fc6aaec0491bfb66ce9924e657ef15e2f6723
             - name: npm_config_cache
               value: /work/npm-cache
             - name: VITE_API_BASE_URL
@@ -34,7 +35,11 @@ spec:
             - name: VITE_ENABLE_VOICE
               value: "true"
             - name: VITE_BROWSER_OTLP_URL
-              value: ""
+              value: /otel
+            - name: VITE_SERVICE_VERSION
+              value: "$(CODE_SHA)"
+            - name: VITE_DEPLOYMENT_ENVIRONMENT
+              value: demo
           command:
             - sh
             - -ec
@@ -74,12 +79,14 @@ spec:
             capabilities: {drop: [ALL]}
           resources:
             requests: {cpu: 500m, memory: 1Gi}
-            limits: {cpu: "2", memory: 3Gi}
+            limits: {cpu: "1", memory: 3Gi}
           volumeMounts:
             - {name: runtime, mountPath: /app, readOnly: true}
             - {name: vision, mountPath: /vision}
       containers:
         - name: web-runtime
+          resources:
+            limits: {cpu: 250m}
           image: public.ecr.aws/docker/library/node:22-alpine
           command: [node, server/index.mjs]
           workingDir: /app
@@ -94,6 +101,8 @@ spec:
           volumeMounts:
             - {name: runtime, mountPath: /app}
         - name: web
+          resources:
+            limits: {cpu: 250m}
           image: public.ecr.aws/nginx/nginx:stable-alpine
           volumeMounts:
             - {name: site, mountPath: /usr/share/nginx/html, readOnly: true}
@@ -126,7 +135,7 @@ spec:
             timeoutSeconds: 3
           resources:
             requests: {cpu: 250m, memory: 512Mi}
-            limits: {cpu: "2", memory: 2Gi}
+            limits: {cpu: "1", memory: 2Gi}
           volumeMounts:
             - {name: runtime, mountPath: /app, readOnly: true}
             - {name: vision, mountPath: /vision, readOnly: true}

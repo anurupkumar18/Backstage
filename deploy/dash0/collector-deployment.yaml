@@ -44,7 +44,7 @@ spec:
                   key: DASH0_DATASET
                   optional: true
             - name: OTEL_CORS_ALLOWED_ORIGIN
-              value: http://localhost:5173
+              value: https://backstage.cnh.radarhq.io
           ports:
             - name: otlp-grpc
               containerPort: 4317
@@ -66,6 +66,7 @@ spec:
               cpu: 100m
               memory: 128Mi
             limits:
+              cpu: 250m
               memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false

@@ -206,6 +206,25 @@
 
 - Release pin: c43885a9a3d72fecc67fc0a80413bae1226cc532. Actual nginx smoke returned200 with10 real person boxes immediately after25 telemetry POSTs, verifying separate budgets. Source remains published before cluster download.
 
+
+## 2026-11-09 — Fit the event CPU quota
+
+- **Branch or PR** · `kunj/hosted-vision`, deployment-only follow-up after PR25 merged at e6bbc8e.
+- **Finding** · The vcluster accepted the web Deployment, but host Pod sync rejected3 CPUs with7.4 already used against a10-core team quota. Admission supplies500m limits to each web container when omitted; both init and regular limits count toward the effective Pod budget.
+- **Change** · Cap vision at1 CPU, each Node/nginx container at250m and install-vision at1 CPU, giving an effective1.5-core Pod ceiling. The private smoke Job uses250m. Disable unused ServiceAccount token mounting. Runtime source staysc43885a9a3d72fecc67fc0a80413bae1226cc532; this change affects resource allocation only.
+- **State** · No user workloads scaled down and no Secret replaced. HTTPRoute cutover is approved but held until the deployment is healthy. API is upgrading8e61ac9 tof536b757, with single writer and projection off. Hosted smoke follows Pod readiness; no success claim before that.
+
+
+## 2026-11-09 — Verify hosted release and finish telemetry configuration
+
+- **Branch or PR** · `kunj/hosted-vision`, PR26 follow-up, building on merged PR25/e6bbc8e.
+- **Scope correction** · Supersedes the "resource allocation only" sentence in the preceding quota entry: that push changes resource limits **and disables unused ServiceAccount token mounting**. No credential or role access is granted.
+- **Verified commands and results** · `docker run --rm -v "$PWD:/repo" registry.k8s.io/kustomize/kustomize:v5.6.0 build --load-restrictor LoadRestrictionsNone /repo/deploy/web/cluster > ../hosted-release.yaml`, then `docker run --rm -i ghcr.io/yannh/kubeconform:v0.7.0 -strict -summary < ../hosted-release.yaml`:2 valid resources. Actual Linux Docker one-core inference:53–61ms across5 frames. Cluster Pod web-bdcdb979-zltgq:all3 containers Ready, both init containers Completed. The private web-vision-smoke Job passed at22:22UTC:root/stage200, incidents401 without bearer/200 with organizer, video Range206,120 recorded samples, detector401/403/200, real model returned1 person on the first clip frame (2586ms cold), private routes404. Real OpenAI briefing mint200 with exactly3 permitted read tools; ephemeral value discarded, never printed.
+- **Cluster and access** · API upgraded from8e61ac9 to publishedf536b757; observed1/1 ready with existing Elastic/role Secrets and one writer. Created web-openai securely. Existing public HTTPS already works because Service/app selects app.kubernetes.io/name=web; the reviewed HTTPRoute force takeover was cancelled and not applied. The user approved public cutover, and no LoadBalancer/NodePort was created. Browser playback at the HTTPS hostname works.
+- **Changes and why** · User supplied Dash0’s us-west-2 gRPC endpoint; populated collector-only dash0-credentials from the saved project token, without copying whole env files. Enable /otel browser monitoring and published source/version metadata in the stock build; set collector CORS to the HTTPS host and cap its CPU at250m. API telemetry and provider ingest verification follow this configuration rollout.
+- **Open issues and next action** · Apply collector and rebuilt web, enable API export, verify actual Dash0 ingestion, and capture final browser proof. Evidence projection remains off until its separate alias/privileges are provisioned. Physical webcam, microphone audio and live caption transcription are not established by the token-mint proof. Badge Radar diagnosis remains mock.
+- **References reviewed** · maine6bbc8e; PR25 Gitar rate-limit fix7680d56; Ali deploy-web07f1169; current API/collector operations and Anurupf536b757 handoffs. Contract remainsaec8576ba4aae08a9344b5d867d2db79d9f06863. No foreign-lane source edits or badge resets.
+
 ## 2026-11-09 — Remove Dash0 UI links; revert unfinished guided demo
 
 - **Working change** · At Luke's explicit request, restored all uncommitted guided-demo and canyon-theme changes to main 5e90f3b. Deleted the temporary runner, route, styles, tests and reference asset; stopped the runner. Pulled team work and ignored private configuration are preserved.
@@ -213,3 +232,12 @@
 - **Verified** · Production build and five evidence inspector tests pass. Only this focused UI removal and its test expectations remain as application changes.
 - **Local data** · The interrupted real demo created Room B incident inc-overflow-b3ce9e8261814bbcb6b37f9629d027d6 in the existing local Elasticsearch checkpoint. It reached plan_proposed, with no approval or acceptance performed by this agent. Undoing code does not delete that saved record.
 - **Reviewed** · main 5e90f3b, Kunj's hosted-vision handoff, Ali deploy-web quota notes and Anurup's evidence delivery. Published on main at Luke’s request; reviewed upstream main e6bbc8e (hosted vision) and Ali deploy-web 40b2270 (public route). The UI removal does not change those integrations.
+
+
+## 2026-11-09 — Keep the host gateway route and provision searchable evidence
+
+- **Branch or PR** · `kunj/hosted-vision`, PR26; integrates main690fc6a and retains both appended handoffs through the log-only merge conflict.
+- **Changes and why** · Repin final web source to690fc6aaec0491bfb66ce9924e657ef15e2f6723, preserving Luke’s removal of provider links/messages. Document Ali’s actual host gateway wiring and a selector-only restore patch for Service/app. The reviewed vcluster HTTPRoute change was cancelled, never applied.
+- **Cluster verification** · Collector1/1 at0.164.0 with the server-only Secret. Dash0 API auth/read works in us-west-2. In the existing API pod, downloaded the publishedf536b757 evidence bootstrap and mapping into/tmp and verified SHA256 values against the reviewed repo; created backstage-demo-incident-evidence-v1 plus its write alias, acknowledged true. Existing checkpoint and role credentials were untouched. Enabled API projection and OTLP only after alias creation; live readback follows restart.
+- **Owner handoff** · Luke: retain API sourcef536b757 with EVIDENCE_PROJECTION_ENABLED=true, OTEL_ENABLED=true, collector4318/http-protobuf, demo/team-backstage resource attributes and matching service.version. Ali:40b2270 correctly records Service/app selector and host HTTPRoute behavior; use the new web-owned cluster overlay and its1.5-core budget, preserve collector1 and provisioned Secrets. No starter Deployment scaling or badge restart.
+- **Verified / open** · Final merged147 UI/30 Node/TypeScript/build checks follow. Browser and provider trace readback, evidence search and final screenshots remain the release gates. Contract unchanged. References: main690fc6a, Ali40b2270, PR25/e6bbc8e, Anurupf536b757, user’s explicit public approval and supplied Dash0 endpoint.

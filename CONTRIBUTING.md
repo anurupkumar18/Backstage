@@ -15,4 +15,10 @@ The [owner map](.github/owners.json) is the source of truth for changed paths. T
 
 Use linked PRs for cross-lane changes. Keep each service's dependencies, lockfile, local tests, environment example, and run commands within its lane. Keep credentials in ignored environment files or platform secrets.
 
+## Scoped contributors
+
+The owner map may also grant a named contributor explicit paths under a separate branch prefix. These grants supplement the existing lanes; they do not transfer ownership or change CODEOWNERS reviews. Directory grants end in `/`; all other entries match one exact file. The check still validates the PR author, branch prefix, and both sides of renames using the base revision. Ownership-map changes therefore need an existing maintainer to land them before dependent contributor PRs can pass.
+
+Anurup (`anurupkumar18`, branches `anurup/<feature>`) owns the Dash0/evidence contribution, with explicitly listed integration paths for the incident API, Elasticsearch, and web inspector. Its handoff log is `docs/handoffs/anurup-log.md`.
+
 After collaborator setup, configure GitHub to require the `scaffold-check` and `changed-paths` jobs and a review on `main`. Connect Gitar and verify the repository guidance is picked up on a feature PR.

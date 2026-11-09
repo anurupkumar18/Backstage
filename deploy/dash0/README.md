@@ -40,13 +40,35 @@ The bug has to be real, not the staged mic or Station A outage. Good candidates:
 2. Save the question, the tool calls or Agent0 steps, the trace and log links it cites, the root cause, and the fix commit or PR to `docs/demo/evidence/dash0-investigation.md`.
 3. Keep tokens and caption text out of the saved transcript.
 
-## Not verified here
+## Earlier scaffold validation and remaining cluster gates
 
 - The manifests were checked offline and have not been applied to a cluster. Run from this directory:
   - `docker run --rm -v "$PWD":/k:ro registry.k8s.io/kustomize/kustomize:v5.6.0 build /k | docker run --rm -i ghcr.io/yannh/kubeconform:v0.7.0 -strict -summary -` validates ConfigMap, Deployment and Service.
   - kubeconform with the datreeio CRDs-catalog schema location validates `slo-check-rules.yaml`.
   - No public schema for `PersesDashboard` was found, so it was only YAML-parsed.
-- No Dash0 org was available. The ingest header format, check rules and dashboard follow Dash0's docs and have not been exercised.
+- The original scaffold had no Dash0 org access; the later API validation below supersedes its dashboard/metric limitation. Historical SLO checks remain inactive.
 - The Dash0 MCP was not loaded in the session that wrote this.
 
 Open question: does the demo namespace already run the Dash0 operator with a `Dash0Monitoring` resource, or do the SLO rules have to be created through the Dash0 UI or CLI?
+
+## Verified provider dashboard (2026-11-09)
+
+Anurup created `Backstage measured API and evidence` in dataset `default`, ID
+`api-9c3b3b01-71b8-411c-b01a-ec2dd38d6644`. Provider readback matched all nine
+panel definitions and layouts. All nine PromQL calls succeeded with real
+backend telemetry; empty persistence-error series remain no data. Aggregations
+retain `service_version` to avoid combining releases with different histogram
+buckets. Whole snapshot projection-pass duration includes multiple ES calls;
+individual ES project request latency is a different measurement.
+
+Use the existing dashboard ID for updates rather than creating a duplicate.
+The CLI reads `DASH0_API_URL`, `DASH0_AUTH_TOKEN`, `DASH0_DATASET` from a safe
+process environment; no token value belongs in command arguments or Git.
+
+```sh
+dash0 dashboards update api-9c3b3b01-71b8-411c-b01a-ec2dd38d6644 -f deploy/dash0/dashboard-incident-timing.yaml
+dash0 dashboards get api-9c3b3b01-71b8-411c-b01a-ec2dd38d6644 -o json
+```
+
+This provider API proof is separate from shared-cluster rollout, dashboard
+browser inspection and the Agent0 investigation; record those in the QA handoff.

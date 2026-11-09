@@ -1,10 +1,8 @@
 .agent-activity { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; }
-.agent-activity__item { display: flex; align-items: flex-start; gap: 0.65rem; flex: 1 1 10rem; }
+.agent-activity__item { display: flex; align-items: flex-start; gap: 12px; flex: 1 1 10rem; }
 .agent-activity__item strong, .agent-activity__item p span { display: block; }
 .agent-activity__item p span { color: var(--muted); font-size: 0.875rem; }
-.agent-activity__dot { width: 14px; height: 14px; flex: none; margin-top: 0.25rem; background: var(--mint); border: 1px solid var(--text); border-radius: 50%; }
+.agent-activity__dot { width: 14px; height: 14px; flex: none; margin-top: 0.25rem; background: var(--mint); border: 1px solid var(--border); border-radius: 50%; }
 .agent-activity__item[data-domain="av"] .agent-activity__dot { background: var(--violet); }
 .agent-activity__item[data-domain="it"] .agent-activity__dot { background: var(--blue); }
-.agent-activity__dot[data-active="true"] { animation: agent-pulse 1s ease-out 4; }
-@keyframes agent-pulse { 50% { box-shadow: 0 0 0 5px var(--soft); transform: scale(1.2); } }
-@media (prefers-reduced-motion: reduce) { .agent-activity__dot { animation: none !important; } }
+.agent-activity__dot[data-active="true"] { outline: 2px solid var(--text); outline-offset: 3px; }

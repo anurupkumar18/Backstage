@@ -134,3 +134,29 @@
 - **Verified commands and results** · TypeScript/build pass; full frontend 122 tests, focused voice 21 tests and Node server 30 tests pass. Diff checks pass. Memory CLI failed silently; project context and daily log were saved and verified directly in the specified Obsidian vault.
 - **Open issues and next owner or action** · Review this follow-up; real microphone and Realtime traffic remain unverified and voice defaults off.
 - **References and latest handoffs reviewed** · Main f3c5e4d, merged #17 3e1e63a, #16 2f560be and docs/handoffs/anurup-log.md; CONTRIBUTING/owners diffs reviewed.
+
+## 2026-11-09 — Kubernetes web runtime and server-only OpenAI Secret
+
+- **Branch or PR** · `kunj/voice-kubernetes`, based on `main@5465ebc` after #18 merged.
+- **Changes and why** · Added the dependency-free, non-root Node runtime Docker target and a loopback sidecar in Deployment web. Only that container receives optional `web-openai.OPENAI_API_KEY` through secretKeyRef; missing credentials preserve board/check-in availability. The production web image enables voice. nginx forwards only the bearer-verified briefing mint plus presence reads/join, and blocks other OpenAI paths and presence reset.
+- **Impact by lane** · Ali must publish/retag both images (`backstage-web` and `backstage-web-runtime`), provision the OpenAI Secret securely, and add web after Dash0/collector prerequisites in his aggregate overlay. No platform-owned files changed. Keep one replica while presence/rate limits are in memory. Public microphone use needs HTTPS. Existing incident Secret identities must be preserved.
+- **Verified commands and results** · Both Docker targets built; TypeScript and Vite production build passed. `node --test apps/web/server/*.test.mjs`: 30/30. Containerized kustomize and strict kubeconform: 2 valid resources, zero errors. Local shared-network container smoke: page/health/presence/join 200, invalid briefing bearer 401, transcription/triage/OpenAI health/reset 404; nginx config valid. Stub incident API and fake key only, no vendor mint.
+- **Open issues and next owner or action** · No cluster apply, registry push, Secret creation or microphone call performed. Ali's platform overlay currently includes badge and incident only; web/Dash0 integration remains the deployment dependency.
+- **References and latest handoffs reviewed** · main 5465ebc, Ali connect-incident-api cf3fcbd (successful cluster rehearsal), Ali badge-k8s 408d198, Luke connect-badge-cluster 478a3f4, Kunj voice-scope-fix 350b414, and Anurup ownership entries from merged #16. No shared contracts changed.
+
+## 2026-11-09 — Apply approved Unslop venue operations direction
+
+- **Branch or PR** · `kunj/unslop-ui`, based on main 99e10ac after #19 merged.
+- **Changes and why** · Applied the user-approved light workspace/dark projector direction using Unslop by Damir Sokolovsky (CC BY 4.0, attribution in ui-design.md). Normalized spacing and interface weights, quieted nav/role controls, removed gradients and decorative face/bounce/drift/pulse effects, removed the board ticker and made the projector summary static. Search stays in page flow with visible phone submission; incident attention has a semantic left marker. Anonymous check-in becomes a light sheet with a confirmation check. Inbox, projector, role controls, QR and actions retain their existing data and permission boundaries.
+- **Impact by lane** · Web presentation only; no shared schema, backend, credentials or deployment changes. Existing presence animation/reduced-motion behavior remains. No paid image generation.
+- **Verified commands and results** · TypeScript, production Vite build, 122 frontend tests and 30 server tests pass. Browser checks: 1440px desktop and 390px phone, dark projector, no horizontal overflow in phone inbox/check-in, keyboard approval to Dispatched and staff acceptance to Accepted in the labelled mock, anonymous check-in success. Screenshots saved in the chat outputs; design decisions and attribution in docs/demo/ui-design.md.
+- **Open issues and next owner or action** · Real deployment, microphone and venue projector lighting remain separate verification. This patch makes no new live integration claim.
+- **References and latest handoffs reviewed** · main 99e10ac, Kunj 9cc5883, Ali cf3fcbd / 408d198, Luke 478a3f4 and Anurup #16; latest main was fetched again before publication. User asked for periodic pulls; local changes were preserved.
+
+## 2026-11-09 — History tab from saved API incidents
+
+- **Branch** · Published on main at Luke's explicit request; integrated upstream main 7fe7c40 before pushing.
+- **Changes** · Added #/history navigation, newest-first saved incident list, search and status filters, and expandable read-only event history with failed-read retry. Uses existing authenticated incident/events endpoints, with no schema or database changes. The earlier header redesign remains reverted.
+- **Verified** · Production build and 34 focused UI tests pass. Browser against the real local API/Elasticsearch displayed the resolved Room B incident and all eight events, with zero unresolved matches and one resolved match. Narrow-screen layout inspected. Tests cover filters, event loading/retry, and removing prior data on permission denial.
+- **Impact** · History is scoped to the API connected to the web app. This local run uses backstage-local-overflow-state, not the separate cluster rehearsal index. No credentials are added to the frontend or Git. Refresh history fetches current data; automatic polling is not enabled for this view.
+- **Reviewed** · main 7fe7c40 (including Anurup's narrow responsive ownership grant), Kunj's latest visual/voice handoffs, and the existing incident/events API contracts. Existing endpoints return all authorized records with next_cursor=null; pagination would need a client extension if the backend later introduces cursors.

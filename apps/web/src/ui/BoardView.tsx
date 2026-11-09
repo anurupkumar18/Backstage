@@ -89,11 +89,10 @@ export function BoardView({
 
   return (
     <section className="board" aria-labelledby={titleId}>
-      <h1 id={titleId} className="sr-only">
+      <h1 id={titleId} className="board__title">
         Incident board
       </h1>
 
-      {incidents.length > 0 ? <Ticker incidents={incidents} /> : null}
 
       {loadError ? (
         <p role="alert" className="notice notice--error">
@@ -150,18 +149,6 @@ export function BoardView({
         }}
       />
     </section>
-  );
-}
-
-function Ticker({ incidents }: { incidents: Incident[] }) {
-  const text = incidents.map((incident) => `${incident.summary} · ${stateLabel(incident.state)}`).join("   ·   ");
-  return (
-    <div className="ticker" aria-hidden="true">
-      <div className="ticker__track">
-        <span className="ticker__copy">{text}   ·   </span>
-        <span className="ticker__copy">{text}   ·   </span>
-      </div>
-    </div>
   );
 }
 
@@ -223,7 +210,7 @@ function CommandBar({ onCommand, onFind }: CommandBarProps) {
             className="command__input"
             type="text"
             autoComplete="off"
-            placeholder={onCommand ? "Ask BACKSTAGE, or report a problem" : "Find an incident: Room 255 BC, badge, verifying..."}
+            placeholder={onCommand ? "Ask BACKSTAGE, or report a problem" : "Find by room, type or incident ID"}
             value={text}
             onChange={(event) => {
               setText(event.target.value);
@@ -233,8 +220,8 @@ function CommandBar({ onCommand, onFind }: CommandBarProps) {
           <button type="submit" className="command__go">
             {onCommand ? "Send" : "Find"}
           </button>
-          <button type="button" className="command__away" aria-label="Slide the command bar away" onClick={() => toggle(true)}>
-            Slide away
+          <button type="button" className="command__away" aria-label="Hide incident search" onClick={() => toggle(true)}>
+            Hide search
           </button>
         </form>
         {message ? (
@@ -246,7 +233,7 @@ function CommandBar({ onCommand, onFind }: CommandBarProps) {
       {hidden ? (
         <div className="command__return">
           <button ref={showRef} type="button" className="btn btn--primary" onClick={() => toggle(false)}>
-            Show command bar
+            Show search
           </button>
         </div>
       ) : null}
@@ -409,12 +396,12 @@ function Detail({ incident, events, state, onAction, evidence }: DetailProps) {
       <div className="detail__grid">
         <section className="panel" aria-labelledby={planId}>
           <div className="panel__head">
-            <Blob color="violet" className="blob" />
+            <AgentMark className="blob" />
             <div>
               <h3 id={planId} className="panel__title">
                 Proposed plan
               </h3>
-              <p className="panel__sub">Drafted by the agents. A person decides.</p>
+              <p className="panel__sub">Review the plan before dispatch</p>
             </div>
           </div>
           <p className="panel__body">{incident.plan ? incident.plan.summary : "No plan yet."}</p>
@@ -545,7 +532,7 @@ function Feed({ events }: { events: ProtocolEvent[] | undefined }) {
 
 function FeedAvatar({ event }: { event: ProtocolEvent }) {
   if (event.actor.kind === "agent") {
-    return <Blob color={event.sequence % 2 === 0 ? "violet" : "mint"} className="blob blob--small" />;
+    return <AgentMark className="blob blob--small" />;
   }
   const initials = event.actor.kind === "system" ? "API" : event.actor.id.slice(0, 2).toUpperCase();
   return (
@@ -555,14 +542,11 @@ function FeedAvatar({ event }: { event: ProtocolEvent }) {
   );
 }
 
-function Blob({ color, className }: { color: "violet" | "mint"; className: string }) {
-  const fill = color === "violet" ? "#8B7CFF" : "#3DD6B0";
+function AgentMark({ className }: { className: string }) {
   return (
-    <svg className={className} viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-      <path d="M50 8C72 6 93 22 92 48C91 74 76 94 50 92C24 91 8 74 9 50C10 26 28 10 50 8Z" fill={fill} />
-      <circle cx="38" cy="46" r="6" fill="#15161A" />
-      <circle cx="62" cy="46" r="6" fill="#15161A" />
-      <path d="M40 63Q50 71 60 63" stroke="#15161A" strokeWidth="5" strokeLinecap="round" fill="none" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" focusable="false">
+      <rect x="4" y="6" width="16" height="14" rx="3" />
+      <path d="M12 3v3M8 11h8M8 15h5" strokeLinecap="round" />
     </svg>
   );
 }

@@ -83,3 +83,13 @@
 - **Verified** · Deployment startup regression test passed. Earlier scaffold and local HTTP integration passed. Ali reported his Service/Deployment Radar dry run passes after the factory correction; this is Ali's evidence, not a live deployment observed here.
 - **Open** · No kubectl or kubeconfig is available here. No Kubernetes Secrets have been created or patched by Luke, and connect.py has not run. Demo index provisioning remains pending. Ali must wait for a secure Kubernetes access path before the live rehearsal. The local cluster env uses the existing web origin; confirm it with Kunj before applying.
 - **Reviewed** · main at 8e61ac9, connection branch at 5448f01, Ali's supplied review and cluster status, plus the previously reviewed lane handoffs. Ali's latest supplied report says all three badge workloads are healthy, BADGE_SIGNAL_TOKEN is empty, and the API/incident Secret do not exist.
+
+## 2026-11-09 — Demo Elastic alias provisioned and Radar Secret edit completed
+
+- **Branch** · main.
+- **Changes** · Provisioned backstage-demo-overflow-state-v1 with the backstage-demo-overflow-state write alias using the official Elastic CLI and data/elasticsearch/demo-state-v1.json. ELASTICSEARCH_INDEX_PREFIX is backstage-demo. The smoke alias was untouched.
+- **Verified** · Elasticsearch acknowledged creation, confirmed is_write_index=true, and returned zero documents. Luke entered the three Elastic settings through Radar's incident-secrets YAML editor. The initial dry run rejected plain values under data; moving the three fields to stringData was accepted. Radar subsequently returned to its read-only resource view with Edit available and no pending Apply review. Credential values were not printed or committed.
+- **Ali** · Deploy the corrected factory-based incident API, verify /readyz against the demo alias, connect badge-config to http://incident-api:8000/api/v1, and run the approval-gated rehearsal. Record readiness and the final incident/job/PDF evidence before claiming the cluster flow works.
+- **Secret ownership** · Per Ali's supplied update, his one-off in-cluster job generated AUTH_TOKENS_JSON and set the matching badge producer token. Preserve these cluster-generated identities. Do not apply Luke's older local .env.cluster wholesale, because it contains different generated tokens. Only the three Elastic fields were intended to change.
+- **Open** · API deployment, effective cluster credential validation, and combined rehearsal remain pending. Kunj must confirm the browser origin. Radar diagnosis and badge queue persistence remain separate dependencies.
+- **Reviewed** · main at 6355f4a including Kunj's web/observability handoffs, existing Ali log at 408d198, and Ali's supplied secret-init report.

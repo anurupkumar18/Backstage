@@ -6,13 +6,18 @@ import { createDemoServer } from "./index.mjs";
 const FAKE_KEY = "sk-proj-TESTONLY0123456789abcdefABCDEF";
 const MASKED = "sk-proj-****CDEF";
 
-function fakeFetch(handler) {
+function fakeFetch(handler, { incidents = 200, status = 200 } = {}) {
   const calls = [];
+  const reads = [];
   const impl = async (url, init) => {
+    if (init.method === "GET") {
+      reads.push({ url, init });
+      return url.endsWith("/incidents") ? jsonResponse(incidents, { items: [], next_cursor: null }) : jsonResponse(status, { rooms: [], sessions: [] });
+    }
     calls.push({ url, init, body: JSON.parse(init.body) });
     return handler(url, init);
   };
-  return { impl, calls };
+  return { impl, calls, reads };
 }
 
 function jsonResponse(status, body) {
@@ -27,7 +32,7 @@ async function start(server) {
 function post(base, path, body = {}, headers = {}) {
   return fetch(base + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
+    headers: { "Content-Type": "application/json", Authorization: "Bearer local-test-organizer", ...headers },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
@@ -304,5 +309,38 @@ describe("helpers and mounting", () => {
     } finally {
       server.close();
     }
+  });
+});
+
+describe("server-verified voice scope", () => {
+  async function scenario(scope, body = {}, authorization = "Bearer verified-api-token") {
+    const upstream = fakeFetch(MINT_OK, scope);
+    const server = createOpenAIServer({ env: { OPENAI_API_KEY: FAKE_KEY }, fetch: upstream.impl, log: () => {} });
+    const base = await start(server);
+    try {
+      const response = await post(base, "/openai/briefing/token", body, { Authorization: authorization });
+      return { status: response.status, body: await response.json(), upstream };
+    } finally { server.close(); }
+  }
+  it("mints status-only tools for an API-verified attendee despite a submitted organizer role", async () => {
+    const { status, body, upstream } = await scenario({ incidents: 403, status: 200 }, { tier: 3, role: "organizer", tools: BRIEFING_TOOLS });
+    assert.equal(status, 200);
+    assert.deepEqual(body.allowed_tools, ["get_status"]);
+    assert.deepEqual(upstream.calls[0].body.session.tools.map((tool) => tool.name), ["get_status"]);
+    assert.equal(upstream.reads.length, 2);
+    assert.equal(upstream.reads[0].init.headers.Authorization, "Bearer verified-api-token");
+    assert.equal(upstream.calls[0].init.headers.Authorization, `Bearer ${FAKE_KEY}`);
+  });
+  it("rejects an invalid or absent API token before minting", async () => {
+    for (const [scope, authorization] of [[{ incidents: 401 }, "Bearer invalid"], [{}, ""]]) {
+      const { status, upstream } = await scenario(scope, { tier: 3 }, authorization);
+      assert.equal(status, 401);
+      assert.equal(upstream.calls.length, 0);
+    }
+  });
+  it("fails closed when API scope cannot be verified", async () => {
+    const { status, upstream } = await scenario({ incidents: 503 });
+    assert.equal(status, 503);
+    assert.equal(upstream.calls.length, 0);
   });
 });

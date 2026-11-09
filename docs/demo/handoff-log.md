@@ -116,3 +116,21 @@
 - **Verified commands and results** · Camera pytest in its existing .venv, with cache/bytecode output disabled: 73 passed. Gateway node:test: 10 passed. Existing #17 validation remains 120 frontend, 27 Node server, TypeScript/build, and real local API browser lifecycle.
 - **Open issues and next owner or action** · Explicit in continuation-status.md. No real microphone, paid model, cloud telemetry or live crowd claim.
 - **References and latest handoffs reviewed** · PR #17, PR #16 at 98aa8dd, main e9078ed and Ali cf3fcbd; all four stopped-agent inventories checked.
+
+## 2026-11-09 — Verify voice authority server-side and serialize tool continuation
+
+- **Branch or PR** · `kunj/voice-scope-fix`, follow-up directly to main. PR #17 was merged at its previous head while this review fix was in progress; this commit is a separate PR.
+- **Changes and why** · Addressed both Gitar findings on #17. The token route now verifies the caller's bearer token through the incident API: scoped incident access enables read tools, authorized status-only access enables just get_status, and invalid/unverifiable scope fails closed. Client tier/role fields cannot alter that result. The returned allowed_tools also gates the browser executor. Hold-to-talk pauses while reads finish and cannot create a second response over the tool continuation.
+- **Impact by lane** · No shared contract or incident API edits. Node server INCIDENT_API_BASE_URL must match the browser API; default remains loopback :8000/api/v1. Voice is still off by default. Existing API endpoints remain authoritative on every read.
+- **Verified commands and results** · Frontend 122 tests, Node server 30 tests, TypeScript/build pass. New regressions cover a forged organizer role on an attendee token, absent/invalid tokens, failed scope checks, a server-granted status-only tool list despite organizer UI state, and holding during a delayed tool read.
+- **Open issues and next owner or action** · Real microphone and vendor traffic remain unverified. No additional public exposure, source ownership change or credentials.
+- **References and latest handoffs reviewed** · PR #17 at 0e05203, Gitar findings at openai.mjs:120 and briefing.ts:107, `.gitar/review/backstage.md:3`. Prior lane update review is recorded above.
+
+## 2026-11-09 — Integrate merged briefing and contributor ownership
+
+- **Branch or PR** · `kunj/voice-scope-fix`, directly against `origin/main@f3c5e4d`.
+- **Changes and why** · Merged the latest main after #17 and Anurup's #16 ownership prerequisite landed. Includes the voice review corrections only relative to main. Refreshed continuation-status.md to show merged implementation, current follow-up and 122 frontend/30 Node server test evidence.
+- **Impact by lane** · Preserves Anurup's contributor grants and handoff; no changes to its integration paths beyond this lane's existing voice/UI entry point. Edge remains unassigned.
+- **Verified commands and results** · TypeScript/build pass; full frontend 122 tests, focused voice 21 tests and Node server 30 tests pass. Diff checks pass. Memory CLI failed silently; project context and daily log were saved and verified directly in the specified Obsidian vault.
+- **Open issues and next owner or action** · Review this follow-up; real microphone and Realtime traffic remain unverified and voice defaults off.
+- **References and latest handoffs reviewed** · Main f3c5e4d, merged #17 3e1e63a, #16 2f560be and docs/handoffs/anurup-log.md; CONTRIBUTING/owners diffs reviewed.

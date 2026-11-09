@@ -16,11 +16,11 @@ function setup() {
   const peer = { addTrack: vi.fn(), createDataChannel: () => channel, createOffer: async () => ({ sdp: "offer" }), setLocalDescription: async () => {}, setRemoteDescription: async () => {}, close: vi.fn() };
   const client = { getStatus: vi.fn(async () => ({ ok: true as const, data: { rooms: [], sessions: [] } })), listIncidents: vi.fn(async () => ({ ok: true as const, data: { items: [], next_cursor: null } })), listEvents: vi.fn() };
   const media = vi.fn(async () => stream);
-  const fetchImpl = vi.fn(async (url: string | URL | Request) => String(url).startsWith("/")
-    ? new Response(JSON.stringify({ value: "ek_test" }), { status: 200 })
+  const fetchImpl = vi.fn(async (url: string | URL | Request, _init?: RequestInit) => String(url).startsWith("/")
+    ? new Response(JSON.stringify({ value: "ek_test", allowed_tools: ["get_status", "list_incidents", "get_incident_events"] }), { status: 200 })
     : new Response("answer", { status: 200 }));
   const onError = vi.fn();
-  const voice = new VoiceBriefing({ client, tier: 3, audio: document.createElement("audio"), onState: vi.fn(), onError, fetch: fetchImpl, getUserMedia: media, createPeer: () => peer as unknown as RTCPeerConnection });
+  const voice = new VoiceBriefing({ client, tier: 3, token: "local-test-organizer", audio: document.createElement("audio"), onState: vi.fn(), onError, fetch: fetchImpl, getUserMedia: media, createPeer: () => peer as unknown as RTCPeerConnection });
   return { voice, track, stream, channel, client, fetchImpl, media, onError };
 }
 
@@ -83,4 +83,40 @@ describe("voice lifecycle", () => {
       expect(channel.sent.some((item) => item.type === "input_audio_buffer.commit")).toBe(false);
     } finally { voice.close(); }
   });
+});
+
+it("blocks a hold during tool execution so only one continuation is created", async () => {
+  const { voice, channel, client, track } = setup();
+  let finish!: (value: { ok: true; data: { rooms: []; sessions: [] } }) => void;
+  client.getStatus.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  try {
+    await voice.connect();
+    channel.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "response.done", response: { status: "completed", output: [
+      { type: "function_call", name: "get_status", arguments: "{}", call_id: "a" },
+    ] } }) }));
+    await waitFor(() => expect(client.getStatus).toHaveBeenCalledOnce());
+    voice.hold();
+    expect(track.enabled).toBe(false);
+    finish({ ok: true, data: { rooms: [], sessions: [] } });
+    await waitFor(() => expect(channel.sent).toHaveLength(2));
+    voice.release();
+    expect(channel.sent.filter((item) => item.type === "response.create")).toHaveLength(1);
+  } finally { voice.close(); }
+});
+
+it("uses the server-granted tool allowlist even when the selected role says organizer", async () => {
+  const { voice, channel, fetchImpl, client } = setup();
+  fetchImpl.mockImplementation(async (url) => String(url).startsWith("/")
+    ? new Response(JSON.stringify({ value: "ek_test", allowed_tools: ["get_status"] }), { status: 200 })
+    : new Response("answer", { status: 200 }));
+  try {
+    await voice.connect();
+    channel.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ type: "response.done", response: { status: "completed", output: [
+      { type: "function_call", name: "list_incidents", arguments: "{}", call_id: "a" },
+    ] } }) }));
+    await waitFor(() => expect(channel.sent).toHaveLength(2));
+    expect(client.listIncidents).not.toHaveBeenCalled();
+    expect(channel.sent[0]?.item?.output).toContain("tool_not_allowed");
+    expect(fetchImpl.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: "Bearer local-test-organizer" });
+  } finally { voice.close(); }
 });

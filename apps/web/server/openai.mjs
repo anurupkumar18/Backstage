@@ -103,14 +103,14 @@ function transcriptionSession(model) {
   };
 }
 
-function briefingSession(model) {
+function briefingSession(model, canReadIncidents) {
   return {
     type: "realtime",
     model,
-    instructions: BRIEFING_INSTRUCTIONS,
+    instructions: canReadIncidents ? BRIEFING_INSTRUCTIONS : "Give a read-only public conference floor briefing using get_status only. State only room and accessibility facts returned by that tool. You cannot read incidents or perform actions.",
     output_modalities: ["audio"],
     max_output_tokens: 600,
-    tools: BRIEFING_TOOLS,
+    tools: canReadIncidents ? BRIEFING_TOOLS : BRIEFING_TOOLS.filter((tool) => tool.name === "get_status"),
     tool_choice: "auto",
     audio: {
       input: { noise_reduction: { type: "near_field" }, turn_detection: null },
@@ -289,6 +289,7 @@ export function createOpenAIRoutes({
     "/openai/briefing/token": rateLimiter(tokensPerMinute, now),
     "/openai/triage": rateLimiter(triagePerMinute, now),
   };
+  const incidentApiBaseUrl = (env.INCIDENT_API_BASE_URL || "http://127.0.0.1:8000/api/v1").replace(/\/$/, "");
   const apiKey = () => (typeof env.OPENAI_API_KEY === "string" ? env.OPENAI_API_KEY.trim() : "");
 
   async function callOpenAI(path, body) {
@@ -322,6 +323,32 @@ export function createOpenAIRoutes({
     return { json };
   }
 
+  // The incident API resolves this bearer token and enforces its real tier/domain/session scope.
+  // Neither a submitted tier nor a selected browser role participates in this decision.
+  async function briefingAccess(request) {
+    const authorization = request.headers.authorization;
+    if (typeof authorization !== "string" || !/^Bearer [^\s]{1,4096}$/.test(authorization)) {
+      return { failure: error(401, "unauthorized", "A valid incident API bearer token is required for voice.") };
+    }
+    const read = (path) => fetchImpl(`${incidentApiBaseUrl}${path}`, {
+      method: "GET", headers: { Authorization: authorization, Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    try {
+      const incidents = await read("/incidents");
+      if (incidents.status === 200 && Array.isArray((await incidents.json())?.items)) return { canReadIncidents: true };
+      if (incidents.status === 403) {
+        const status = await read("/status");
+        if (status.status === 200 && Array.isArray((await status.json())?.rooms)) return { canReadIncidents: false };
+        if (status.status === 401 || status.status === 403) return { failure: error(401, "unauthorized", "The incident API did not authorize this voice session.") };
+      }
+      if (incidents.status === 401) return { failure: error(401, "unauthorized", "The incident API did not authorize this voice session.") };
+      return { failure: error(503, "scope_unavailable", "Could not verify voice access with the incident API.") };
+    } catch {
+      return { failure: error(503, "scope_unavailable", "Could not verify voice access with the incident API.") };
+    }
+  }
+
   async function mint(session, model) {
     const { json, failure } = await callOpenAI("/realtime/client_secrets", {
       expires_after: { anchor: "created_at", seconds: ttlSeconds },
@@ -333,7 +360,7 @@ export function createOpenAIRoutes({
     if (typeof json?.value !== "string" || typeof json?.expires_at !== "number") {
       return error(502, "upstream_invalid", "OpenAI returned an unexpected client secret shape.");
     }
-    return { status: 200, body: { value: json.value, expires_at: json.expires_at, model, session_type: session.type } };
+    return { status: 200, body: { value: json.value, expires_at: json.expires_at, model, session_type: session.type, ...(session.tools ? { allowed_tools: session.tools.map((tool) => tool.name) } : {}) } };
   }
 
   async function triage(body) {
@@ -385,7 +412,9 @@ export function createOpenAIRoutes({
       return mint(transcriptionSession(models.transcription), models.transcription);
     }
     if (path === "/openai/briefing/token") {
-      return mint(briefingSession(models.briefing), models.briefing);
+      const access = await briefingAccess(request);
+      if (access.failure) return access.failure;
+      return mint(briefingSession(models.briefing, access.canReadIncidents), models.briefing);
     }
     return triage(body);
   }

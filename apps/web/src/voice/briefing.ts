@@ -1,10 +1,11 @@
 import type { BriefingReadClient } from "./briefingTools";
 import { createBriefingTools } from "./briefingTools";
 
-export type VoiceState = "off" | "connecting" | "ready" | "listening" | "answering";
+export type VoiceState = "off" | "connecting" | "ready" | "listening" | "reading" | "answering";
 interface Options {
   client: BriefingReadClient;
   tier: number;
+  token: string;
   audio: HTMLAudioElement;
   onState(state: VoiceState): void;
   onError(message: string): void;
@@ -24,6 +25,8 @@ export class VoiceBriefing {
   private holding = false;
   private answering = false;
   private toolRounds = 0;
+  private toolRunning = false;
+  private allowedTools = new Set<string>();
   private startedAt = 0;
 
   constructor(private readonly options: Options) {}
@@ -33,11 +36,13 @@ export class VoiceBriefing {
     this.options.onState("connecting");
     try {
       const tokenResponse = await fetchImpl("/openai/briefing/token", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", signal: this.abort.signal,
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.options.token}` }, body: "{}", signal: this.abort.signal,
       });
       if (!tokenResponse.ok) throw new Error("Voice is unavailable. Your floor brief still works.");
-      const token = await tokenResponse.json() as { value?: string };
+      const token = await tokenResponse.json() as { value?: string; allowed_tools?: string[] };
       if (!token.value?.startsWith("ek_")) throw new Error("Voice returned an invalid session. Use the floor brief.");
+      if (!Array.isArray(token.allowed_tools) || token.allowed_tools.some((name) => !["get_status", "list_incidents", "get_incident_events"].includes(name))) throw new Error("Voice returned an invalid tool scope. Use the floor brief.");
+      this.allowedTools = new Set(token.allowed_tools);
       if (this.abort.signal.aborted) return;
       const stream = await (this.options.getUserMedia ?? (() => navigator.mediaDevices.getUserMedia({ audio: true })))();
       for (const track of stream.getTracks()) track.enabled = false;
@@ -92,7 +97,7 @@ export class VoiceBriefing {
   }
 
   hold() {
-    if (this.channel?.readyState !== "open" || this.abort.signal.aborted || this.holding) return;
+    if (this.channel?.readyState !== "open" || this.abort.signal.aborted || this.holding || this.toolRunning) return;
     if (this.answering) {
       this.send({ type: "response.cancel" });
       this.send({ type: "output_audio_buffer.clear" });
@@ -137,14 +142,20 @@ export class VoiceBriefing {
         if (event.response?.status !== "completed") throw new Error("response failed");
         const calls = (Array.isArray(event.response.output) ? event.response.output : []).filter((item: { type?: string }) => item.type === "function_call");
         if (calls.length) {
+          if (this.holding) return;
+          this.toolRunning = true;
+          this.options.onState("reading");
           if (++this.toolRounds > 12 || calls.length > 6) throw new Error("tool limit");
           const execute = createBriefingTools(this.options.client, this.options.tier);
           const outputs = await Promise.all(calls.map(async (call: { name: string; arguments: string; call_id: string }) => ({
-            type: "conversation.item.create", item: { type: "function_call_output", call_id: call.call_id, output: JSON.stringify(await execute(call.name, call.arguments)) },
+            type: "conversation.item.create", item: { type: "function_call_output", call_id: call.call_id, output: JSON.stringify(this.allowedTools.has(call.name) ? await execute(call.name, call.arguments) : { error: "tool_not_allowed" }) },
           })));
+          this.toolRunning = false;
+          if (this.abort.signal.aborted || this.holding) return;
           for (const output of outputs) this.send(output);
           this.send({ type: "response.create" });
           this.answering = true;
+          this.options.onState("answering");
         } else {
           this.options.onState("ready");
         }

@@ -67,12 +67,12 @@ function StatusRoute({ client, variant, presence, joinUrl }: { client: ApiClient
   return <StatusView status={status} error={error} variant={variant} presence={presence} joinUrl={variant === "projector" ? joinUrl : undefined} />;
 }
 
-function InboxRoute({ client, identity, announce }: { client: ApiClient; identity: Identity; announce: (message: string) => void }) {
+function InboxRoute({ client, identity, token, announce }: { token: string; client: ApiClient; identity: Identity; announce: (message: string) => void }) {
   const inbox = useInbox(client, identity, announce);
   return <><InboxView brief={inbox.brief} activity={inbox.activity} items={inbox.items} identity={identity} actionState={inbox.actionState}
     onAction={(incident, action) => void inbox.run(incident, action)} focusIncidentId={inbox.focusIncidentId}
     loadError={inbox.loadError} loading={inbox.loading} onMarkSeen={inbox.markSeen} />
-    {import.meta.env.VITE_ENABLE_VOICE === "true" ? <VoiceBriefingControl client={client} tier={identity.tier} announce={announce} /> : null}</>;
+    {import.meta.env.VITE_ENABLE_VOICE === "true" ? <VoiceBriefingControl token={token} client={client} tier={identity.tier} announce={announce} /> : null}</>;
 }
 
 export default function App() {
@@ -141,7 +141,7 @@ export default function App() {
       devPanel={devPanel}
     >
       {route === "me" && identity && identity.tier > 0 ? (
-        <InboxRoute key={`inbox-${identityId}-${token}`} client={client} identity={identity} announce={setAnnouncement} />
+        <InboxRoute token={token} key={`inbox-${identityId}-${token}`} client={client} identity={identity} announce={setAnnouncement} />
       ) : route === "board" ? (
         <BoardRoute key={`board-${identityId}-${token}`} presence={presence} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
       ) : (

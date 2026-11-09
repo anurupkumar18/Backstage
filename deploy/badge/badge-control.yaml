@@ -1,0 +1,94 @@
+# badge-control: owns the badge queue, heartbeats and PDFs, and serves the
+# internal contract on :8090. It keeps running when badge-station-a is stopped.
+apiVersion: v1
+kind: Service
+metadata:
+  name: badge-control
+  labels:
+    app.kubernetes.io/name: badge-control
+    app.kubernetes.io/part-of: backstage
+spec:
+  selector:
+    app.kubernetes.io/name: badge-control
+  ports:
+    - name: http
+      port: 8090
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: badge-control
+  labels:
+    app.kubernetes.io/name: badge-control
+    app.kubernetes.io/part-of: backstage
+    app.kubernetes.io/component: badge
+spec:
+  # One writer: the queue lives in this pod's memory until BADGE_STORE=elastic lands.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: badge-control
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: badge-control
+        app.kubernetes.io/part-of: backstage
+        app.kubernetes.io/component: badge
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: badge-control
+          image: public.ecr.aws/docker/library/python:3.13-slim
+          command: ["python", "-m", "badge_sim", "serve"]
+          ports:
+            - name: http
+              containerPort: 8090
+          env:
+            - name: BADGE_ROLE
+              value: control
+            - name: BADGE_ARTIFACT_DIR
+              value: /var/lib/badge
+          envFrom:
+            - configMapRef:
+                name: badge-config
+            - secretRef:
+                name: badge-secrets
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: code
+              mountPath: /opt/badge
+              readOnly: true
+            - name: artifacts
+              mountPath: /var/lib/badge
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: code
+          configMap:
+            name: badge-code
+        - name: artifacts
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

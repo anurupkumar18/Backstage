@@ -127,12 +127,25 @@ class ArtifactStore:
     def write(self, job_id, station_id):
         """Write the PDF once. A retry or failover reuses the same file and reference."""
         pdf_ref = self.ref_for(job_id)
+        self.put(pdf_ref, badge_pdf(job_id, station_id))
+        return pdf_ref
+
+    def put(self, pdf_ref, data):
+        """Store bytes under a reference unless it already exists (first write wins)."""
         target = self.path(pdf_ref)
         if not target.is_file():
-            tmp = target.with_suffix(".tmp")
-            tmp.write_bytes(_badge_pdf(f"Backstage badge {job_id} printed at {station_id}"))
-            tmp.replace(target)
-        return pdf_ref
+            tmp = target.with_suffix(f".{threading.get_ident()}.tmp")
+            tmp.write_bytes(data)
+            try:
+                tmp.replace(target)
+            except OSError:
+                tmp.unlink(missing_ok=True)
+                if not target.is_file():
+                    raise
+
+
+def badge_pdf(job_id, station_id):
+    return _badge_pdf(f"Backstage badge {job_id} printed at {station_id}")
 
 
 def _badge_pdf(text):

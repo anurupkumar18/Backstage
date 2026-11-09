@@ -12,6 +12,7 @@ import json
 import shutil
 import tempfile
 import threading
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -19,7 +20,7 @@ from urllib.request import Request, urlopen
 from . import SEED_JOB_IDS
 from .config import Settings
 from .contract import validators
-from .server import BadgeApp, serve
+from .server import BadgeApp, StationApp, serve
 from .signals import wait_until
 
 TOKEN = "smoke-internal-token"
@@ -77,13 +78,16 @@ def _call(base, method, path, body=None, headers=None, token=TOKEN):
         return error.code, json.load(error)
 
 
-def run(verbose=True):
+def run(verbose=True, split=False):
+    """split=True runs badge-control and each station as separate apps talking over HTTP,
+    the way they run as separate Deployments in Kubernetes."""
     say = print if verbose else (lambda *a, **k: None)
     check = validators()
     tmp = tempfile.mkdtemp(prefix="badge-smoke-")
     ingress = IngressStub()
     threading.Thread(target=ingress.server.serve_forever, daemon=True).start()
     settings = Settings(
+        role="control" if split else "all",
         port=0,
         incident_api_base_url=ingress.url,
         signal_token="smoke-signal-token",
@@ -100,6 +104,13 @@ def run(verbose=True):
     server = serve(app, "127.0.0.1", 0)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_port}"
+    pods = {}
+    if split:
+        for sid in settings.stations:
+            pod = StationApp(replace(settings, role="station", station_id=sid, control_url=base))
+            pod.outbox.retry_seconds = 0.2
+            pod.start()
+            pods[sid] = pod
 
     def ok(condition, message):
         if not condition:
@@ -107,13 +118,22 @@ def run(verbose=True):
         say(f"  ok  {message}")
 
     try:
-        say(f"badge-control at {base}, incident API stub at {ingress.url}, contracts {'on' if check else 'skipped'}")
+        layout = "control + 2 station apps over HTTP" if split else "one process"
+        say(f"badge-control at {base} ({layout}), incident API stub at {ingress.url}, "
+            f"contracts {'on' if check else 'skipped'}")
         status, body = _call(base, "GET", "/internal/badges/jobs/badge-job-001", token=None)
         ok(status == 401 and body["error"]["code"] == "unauthorized", "requests without the service credential get 401")
 
-        app.fault("station-a")
+        if split:
+            ok(wait_until(lambda: app.is_online("station-a") and app.is_online("station-b"), 5),
+               "both station apps are heartbeating to badge-control")
+            pods["station-a"].stop()  # the local stand-in for scaling badge-station-a to zero
+            stopped = not pods["station-a"].station.running
+        else:
+            app.fault("station-a")
+            stopped = not app.stations["station-a"].running
         app.seed("station-a")
-        ok(not app.stations["station-a"].running, "Station A stopped; seeded " + ", ".join(SEED_JOB_IDS))
+        ok(stopped, "Station A stopped; seeded " + ", ".join(SEED_JOB_IDS))
 
         def offline_report():
             return [
@@ -177,6 +197,8 @@ def run(verbose=True):
         say(json.dumps(app.state(), indent=2))
         return 1
     finally:
+        for pod in pods.values():
+            pod.stop()
         server.shutdown()
         server.server_close()
         app.stop()

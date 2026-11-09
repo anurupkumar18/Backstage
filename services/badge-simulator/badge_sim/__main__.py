@@ -1,7 +1,8 @@
 """Command line for the badge simulator.
 
-  python -m badge_sim serve              run badge-control plus stations A and B
-  python -m badge_sim smoke              local A-to-B failover check (exit 0 on success)
+  python -m badge_sim serve              run by BADGE_ROLE: all (default), control, or station
+  python -m badge_sim smoke [--split]    local A-to-B failover check (exit 0 on success);
+                                         --split runs control and each station as separate apps
   python -m badge_sim seed|fault|recover|reset|state [--station station-a]
                                          drive a running `serve` (needs BADGE_ADMIN_ENABLED=true)
 
@@ -42,6 +43,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog="badge_sim")
     parser.add_argument("command", choices=("serve", "smoke", "seed", "fault", "recover", "reset", "state"))
     parser.add_argument("--station", default="station-a")
+    parser.add_argument("--split", action="store_true", help="smoke: run each station as its own app over HTTP")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -51,21 +53,22 @@ def main(argv=None):
     if args.command == "smoke":
         from .smoke import run
 
-        return run()
+        return run(split=args.split)
     if args.command != "serve":
         return _admin(args.command, args.station)
 
-    from .server import BadgeApp, serve
+    from .server import build_app, serve
 
     settings = Settings.from_env()
     if not settings.internal_token:
         parser.error("BADGE_INTERNAL_TOKEN must be set")
-    app = BadgeApp(settings)
+    app = build_app(settings)
     app.start()
     server = serve(app, settings.host, settings.port)
     logging.info(
-        "badge-control on http://%s:%s (store=%s radar=%s admin=%s)",
-        settings.host, settings.port, settings.store, settings.radar_mode, settings.admin_enabled,
+        "badge %s on http://%s:%s (station=%s store=%s radar=%s admin=%s)",
+        settings.role, settings.host, settings.port, settings.station_id if settings.role == "station" else "-",
+        settings.store, settings.radar_mode, settings.admin_enabled,
     )
     try:
         server.serve_forever()

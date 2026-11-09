@@ -13,6 +13,12 @@ def _float(name, default):
 
 @dataclass
 class Settings:
+    # all: control and both stations in one process (local default).
+    # control: badge-control only; stations reach it over HTTP.
+    # station: one station (station_id) that talks to control_url.
+    role: str = "all"
+    station_id: str = "station-a"
+    control_url: str = "http://127.0.0.1:8090"
     port: int = 8090
     host: str = "127.0.0.1"
     namespace: str = "team-backstage"
@@ -38,6 +44,9 @@ class Settings:
     def from_env(cls):
         env = os.environ.get
         return cls(
+            role=env("BADGE_ROLE", "all"),
+            station_id=env("BADGE_STATION_ID", "station-a"),
+            control_url=env("BADGE_CONTROL_URL", "http://127.0.0.1:8090").rstrip("/"),
             port=int(env("BADGE_PORT", "8090")),
             host=env("BADGE_HOST", "127.0.0.1"),
             namespace=env("KUBE_NAMESPACE", "team-backstage"),

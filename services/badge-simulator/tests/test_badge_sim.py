@@ -307,6 +307,44 @@ class SmokeTest(unittest.TestCase):
     def test_local_failover(self):
         self.assertEqual(run_smoke(verbose=False), 0)
 
+    def test_split_failover_over_http(self):
+        self.assertEqual(run_smoke(verbose=False, split=True), 0)
+
+
+class ControlRoleTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.clock = Clock()
+        self.app = BadgeApp(settings(role="control", artifact_dir=self.tmp.name), clock=self.clock)
+
+    def test_control_runs_no_local_stations(self):
+        self.assertEqual(self.app.stations, {})
+        with self.assertRaises(ApiError) as caught:
+            self.app.fault("station-a")
+        self.assertEqual(caught.exception.status, 409)
+
+    def test_station_routes_report_ages_not_timestamps(self):
+        self.app.station_heartbeat("station-a")
+        self.app.seed("station-a")
+        self.clock.now += 7
+        view = self.app.station_view("station-a", "pending")
+        self.assertEqual(view["heartbeat_age_s"], 7)
+        self.assertEqual([j["age_s"] for j in view["jobs"]], [7, 7, 7])
+
+    def test_complete_requires_uploaded_pdf(self):
+        self.app.seed("station-a")
+        with self.assertRaises(ApiError) as caught:
+            self.app.station_complete("station-a", "badge-job-001", {"pdf_ref": "pdf-badge-job-001"})
+        self.assertEqual(caught.exception.status, 409)
+        with self.assertRaises(ApiError):
+            self.app.put_pdf("pdf-badge-job-001", b"not a pdf")
+        with self.assertRaises(ApiError):
+            self.app.put_pdf("../etc/passwd", b"%PDF-1.4")
+        self.app.put_pdf("pdf-badge-job-001", b"%PDF-1.4 test")
+        result = self.app.station_complete("station-a", "badge-job-001", {"pdf_ref": "pdf-badge-job-001"})
+        self.assertEqual(result, {"completed": True})
+
 
 class ContractTests(unittest.TestCase):
     def test_signals_match_shared_contract(self):

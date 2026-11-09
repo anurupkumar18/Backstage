@@ -1,0 +1,156 @@
+# Badge print stations. Each heartbeats to badge-control and prints its queue.
+# The staged outage is a real workload stop:
+#   kubectl -n team-backstage scale deployment/badge-station-a --replicas=0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: badge-station-a
+  labels:
+    app.kubernetes.io/name: badge-station-a
+    app.kubernetes.io/part-of: backstage
+    app.kubernetes.io/component: badge
+    backstage.dev/station-id: station-a
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: badge-station-a
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: badge-station-a
+        app.kubernetes.io/part-of: backstage
+        app.kubernetes.io/component: badge
+        backstage.dev/station-id: station-a
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: station
+          image: public.ecr.aws/docker/library/python:3.13-slim
+          command: ["python", "-m", "badge_sim", "serve"]
+          ports:
+            - name: http
+              containerPort: 8090
+          env:
+            - name: BADGE_ROLE
+              value: station
+            - name: BADGE_STATION_ID
+              value: station-a
+            - name: OTEL_SERVICE_NAME
+              value: badge-station-a
+          envFrom:
+            - configMapRef:
+                name: badge-config
+            - secretRef:
+                name: badge-secrets
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 10m, memory: 48Mi}
+            limits: {cpu: 200m, memory: 96Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: code
+              mountPath: /opt/badge
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: code
+          configMap:
+            name: badge-code
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: badge-station-b
+  labels:
+    app.kubernetes.io/name: badge-station-b
+    app.kubernetes.io/part-of: backstage
+    app.kubernetes.io/component: badge
+    backstage.dev/station-id: station-b
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: badge-station-b
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: badge-station-b
+        app.kubernetes.io/part-of: backstage
+        app.kubernetes.io/component: badge
+        backstage.dev/station-id: station-b
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: station
+          image: public.ecr.aws/docker/library/python:3.13-slim
+          command: ["python", "-m", "badge_sim", "serve"]
+          ports:
+            - name: http
+              containerPort: 8090
+          env:
+            - name: BADGE_ROLE
+              value: station
+            - name: BADGE_STATION_ID
+              value: station-b
+            - name: OTEL_SERVICE_NAME
+              value: badge-station-b
+          envFrom:
+            - configMapRef:
+                name: badge-config
+            - secretRef:
+                name: badge-secrets
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 10m, memory: 48Mi}
+            limits: {cpu: 200m, memory: 96Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: code
+              mountPath: /opt/badge
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: code
+          configMap:
+            name: badge-code
+        - name: tmp
+          emptyDir: {}

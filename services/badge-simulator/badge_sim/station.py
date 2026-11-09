@@ -58,7 +58,10 @@ class Station:
 
     def _run(self):
         while not self._stop.is_set():
-            self.tick()
+            try:
+                self.tick()
+            except Exception as error:  # noqa: BLE001 - a control outage must not kill the station
+                log.warning("%s tick failed: %s", self.station_id, error)
             self._stop.wait(self.settings.heartbeat_seconds)
 
     def tick(self):

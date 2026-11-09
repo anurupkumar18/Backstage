@@ -11,12 +11,25 @@ From the repo root, after `make check`'s venv setup (on Windows the interpreter 
 ```sh
 cd services/badge-simulator
 ../../.venv/bin/python -m badge_sim smoke                       # local A-to-B failover, exits 0 on success
-../../.venv/bin/python -m unittest discover -s tests -t .       # unit tests (includes the smoke)
+../../.venv/bin/python -m badge_sim smoke --split               # same, with control and each station as separate apps over HTTP
+../../.venv/bin/python -m unittest discover -s tests -t .       # unit tests (includes both smokes and the deploy checks)
 ```
+
+## Roles
+
+`BADGE_ROLE` picks what a process runs:
+
+| Role | Runs | Used for |
+| --- | --- | --- |
+| `all` (default) | badge-control and both stations in one process | local development, `smoke` |
+| `control` | badge-control only. It owns the queue, heartbeats and PDFs, and exposes `/internal/stations/...` and `PUT /internal/pdfs/...` to station pods. | `Deployment/badge-control` |
+| `station` | one station (`BADGE_STATION_ID`) that heartbeats to `BADGE_CONTROL_URL`, prints its queue and uploads PDFs. badge-control reports ages instead of timestamps, so pod clocks never need to agree. | `Deployment/badge-station-a`, `-b` |
+
+Manifests and the staged Kubernetes outage are in [deploy/badge](../../deploy/badge/README.md).
 
 The smoke starts badge-control, both stations and a recording incident-API stub. Its first signal post returns 503 so retries are exercised. Then it stops Station A, seeds `badge-job-001..003` on A, waits for Station B to report A offline, runs the mock diagnosis, reroutes (and replays the same `Idempotency-Key`, and checks a changed body gets `409 idempotency_conflict`), waits for B to print all three PDFs, and checks one `badge_job_complete` signal per job. Every signal and HTTP payload is validated against `contracts/`.
 
-To run the service and drive it by hand (rehearsal only, never with `BADGE_ADMIN_ENABLED` in the live demo):
+To run the service and drive it by hand. The `/admin/*` routes need the service token and exist only with `BADGE_ADMIN_ENABLED=true`. They drive the seeded badge scenario, so label them as rehearsal controls in the demo.
 
 ```sh
 export BADGE_INTERNAL_TOKEN=dev-token BADGE_ADMIN_ENABLED=true
@@ -48,6 +61,6 @@ python -m badge_sim reset
 
 ## Not done yet
 
-- `BADGE_STORE=elastic`. Stations and control currently share one process (`MemoryStore`), which is the labeled local fake.
-- Separate station pods and Kubernetes manifests (`deploy/badge/`, `deploy/platform/`) so Station A can be stopped as a real workload.
+- `BADGE_STORE=elastic`. badge-control keeps the queue in memory (`MemoryStore`, the labeled fake), so restarting the badge-control pod loses queued jobs. Stations survive their own restarts.
+- Applying the manifests to the cluster and capturing the Radar evidence for a real Station A stop. That needs `kubectl` and cluster credentials.
 - Replay against Luke's real incident API (`INCIDENT_API_BASE_URL`) once it accepts `badge_health` and `badge_job_complete`.

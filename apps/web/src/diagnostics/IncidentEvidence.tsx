@@ -569,7 +569,7 @@ function EvidenceSearch({
           autoComplete="off"
           value={q}
           onChange={(event) => setQ(event.target.value)}
-          placeholder="Incident, event or protocol text"
+          placeholder="Words from the event summary"
         />
         <div className="evidence__filters">
           <label>
@@ -629,7 +629,7 @@ function EvidenceSearch({
       {result?.ok ? (
         <>
           <p role="status">
-            Showing {result.data.items.length} authorized results (limit{" "}
+            Showing {result.data.items.length} authorized {result.data.items.length === 1 ? "result" : "results"} (limit{" "}
             {result.data.limit}). Narrow filters to find more evidence.
           </p>
           <details>

@@ -74,12 +74,12 @@
   margin-bottom: 1rem;
 }
 .evidence__wait {
-  border-left: 3px solid var(--violet, #8b7cff);
+  border-left: 3px solid var(--orange-text, #a64608);
 }
 .evidence progress {
   width: 100%;
   height: 0.6rem;
-  accent-color: var(--violet, #8b7cff);
+  accent-color: var(--orange-text, #a64608);
   margin-bottom: 0.75rem;
 }
 .evidence__sequence {
@@ -116,8 +116,8 @@
   cursor: pointer;
 }
 .evidence button[aria-pressed="true"] {
-  border-color: var(--focus, #15161a);
-  box-shadow: inset 0 0 0 1px var(--focus, #15161a);
+  border-color: var(--orange-text, #a64608);
+  box-shadow: inset 0 0 0 1px var(--orange-text, #a64608);
 }
 .evidence button:disabled {
   opacity: 0.65;
@@ -222,7 +222,17 @@
     min-height: 44px;
   }
   .evidence__sequence {
-    max-width: calc(100vw - 6rem);
+    flex-direction: column;
+    overflow: visible;
+    max-width: none;
+  }
+  .evidence__sequence li {
+    max-width: none;
+    width: 100%;
+  }
+  .evidence__sequence button {
+    width: 100%;
+    overflow-wrap: anywhere;
   }
 }
 @media (prefers-reduced-motion: reduce) {

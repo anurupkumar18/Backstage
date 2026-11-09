@@ -125,3 +125,12 @@
 - **Verified commands and results** · Frontend 122 tests, Node server 30 tests, TypeScript/build pass. New regressions cover a forged organizer role on an attendee token, absent/invalid tokens, failed scope checks, a server-granted status-only tool list despite organizer UI state, and holding during a delayed tool read.
 - **Open issues and next owner or action** · Real microphone and vendor traffic remain unverified. No additional public exposure, source ownership change or credentials.
 - **References and latest handoffs reviewed** · PR #17 at 0e05203, Gitar findings at openai.mjs:120 and briefing.ts:107, `.gitar/review/backstage.md:3`. Prior lane update review is recorded above.
+
+## 2026-11-09 — Integrate merged briefing and contributor ownership
+
+- **Branch or PR** · `kunj/voice-scope-fix`, directly against `origin/main@f3c5e4d`.
+- **Changes and why** · Merged the latest main after #17 and Anurup's #16 ownership prerequisite landed. Includes the voice review corrections only relative to main. Refreshed continuation-status.md to show merged implementation, current follow-up and 122 frontend/30 Node server test evidence.
+- **Impact by lane** · Preserves Anurup's contributor grants and handoff; no changes to its integration paths beyond this lane's existing voice/UI entry point. Edge remains unassigned.
+- **Verified commands and results** · TypeScript/build pass; full frontend 122 tests, focused voice 21 tests and Node server 30 tests pass. Diff checks pass. Memory CLI failed silently; project context and daily log were saved and verified directly in the specified Obsidian vault.
+- **Open issues and next owner or action** · Review this follow-up; real microphone and Realtime traffic remain unverified and voice defaults off.
+- **References and latest handoffs reviewed** · Main f3c5e4d, merged #17 3e1e63a, #16 2f560be and docs/handoffs/anurup-log.md; CONTRIBUTING/owners diffs reviewed.

@@ -98,3 +98,12 @@
 - **Verified commands and results** · Regression reproduces success → 403 → same-version success and confirms two timeline reads. Frontend 92/92, TypeScript and build pass on Node 22.
 - **Open issues and next owner or action** · Dependent activity and briefing branches must merge this fix before review.
 - **References and latest handoffs reviewed** · PR #13 Gitar inline review and inbox `80313dd`; previous reviewed lane handoffs remain current.
+
+## 2026-11-09 — Consolidate directly against main
+
+- **Branch or PR** · `kunj/floor-briefing`, based on `origin/main@e9078ed` after merging latest main.
+- **Changes and why** · Preserved every handoff from the inbox/activity branches and carried the denied-read fix `c00db14` into the same main-targeted PR. PR #13 merged into phone-join after #12 closed, and #15 merged into personal-inbox after #13 closed; neither was present in main. This PR deliberately includes both chunks plus the floor brief/voice work. No force push or teammate file edits.
+- **Impact by lane** · Includes Ali's merged cluster connection and Luke's latest log through normal merge; no shared contract changes. The new API URL still requires securely supplied runtime role tokens and the hosting origin.
+- **Verified commands and results** · Main integration frontend 120 tests, Node server 27 tests, TypeScript/build and diff checks pass. Earlier 390px real-API lifecycle and missing-key voice fallback apply. Browser confirms the first successful staff token entry shows its recent recovery summary.
+- **Open issues and next owner or action** · Target main for this PR. Camera ownership, real microphone/Realtime test, stage captions, report intake and sponsor access remain explicit dependencies.
+- **References and latest handoffs reviewed** · Main `e9078ed`, Ali connection `cf3fcbd`, phone-join `a19eac9`, personal-inbox `66888a3`, activity `eeefc9f`, local cache fix `c00db14`. Contracts remain `8b902d2f715d1c068a1f4a10bfb3c850a37abf7a`.

@@ -1051,5 +1051,122 @@
       "status": "complete",
       "pdf_ref": "pdf-badge-job-001"
     }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/api/v1/incidents/{id}/diagnostics",
+    "path": "/api/v1/incidents/inc-overflow-room-b/diagnostics",
+    "status": 200,
+    "response": {
+      "incident_id": "inc-overflow-room-b",
+      "version": 3,
+      "storage": {
+        "mode": "memory",
+        "durable": false
+      },
+      "provenance": {
+        "origin": "unknown"
+      },
+      "verification": {
+        "status": "pending",
+        "reason": "Recovery verification starts after the assigned staff member accepts.",
+        "required_duration_s": 60,
+        "observed_duration_s": 0,
+        "evidence_signal_ids": []
+      },
+      "signals": [
+        {
+          "signal_id": "cam-b-zone_count-03",
+          "kind": "zone_count",
+          "source_id": "cam-b",
+          "observed_at": "2026-11-09T19:00:30Z",
+          "received_at": "2026-11-09T19:00:30Z",
+          "origin": "unknown",
+          "facts": {
+            "zone": "door",
+            "count": 8,
+            "threshold": 5
+          }
+        }
+      ],
+      "events": [
+        {
+          "event_id": "inc-overflow-room-b-1",
+          "sequence": 1,
+          "type": "raise",
+          "occurred_at": "2026-11-09T19:00:30Z",
+          "signal_ids": [
+            "cam-b-zone_count-03"
+          ]
+        }
+      ],
+      "projection": {
+        "status": "disabled",
+        "checkpoint_revision": null,
+        "indexed_revision": null,
+        "watermark_version": null,
+        "projected_at": null,
+        "last_error": null
+      },
+      "trace": {
+        "trace_id": "301b8846dc4f475e9b4175b7fe35b31c",
+        "url": null
+      }
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/api/v1/evidence/search",
+    "path": "/api/v1/evidence/search",
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "document_id": "inc-overflow-room-b-1",
+          "kind": "event",
+          "incident_id": "inc-overflow-room-b",
+          "room_id": "room-b",
+          "event_type": "raise",
+          "occurred_at": "2026-11-09T19:00:30Z",
+          "received_at": "2026-11-09T19:00:30Z",
+          "summary": "Room B (room-b) overflow: raise -> detected. Signal zone_count source cam-b door count 8 threshold 5.",
+          "signal_id": "cam-b-zone_count-03",
+          "event_id": "inc-overflow-room-b-1",
+          "sequence": 1,
+          "trace_id": "301b8846dc4f475e9b4175b7fe35b31c"
+        }
+      ],
+      "total": 1,
+      "limit": 20,
+      "projection": {
+        "status": "current",
+        "checkpoint_revision": {
+          "seq_no": 3,
+          "primary_term": 1
+        },
+        "indexed_revision": {
+          "seq_no": 3,
+          "primary_term": 1
+        },
+        "watermark_version": null,
+        "projected_at": "2026-11-09T19:00:35Z",
+        "last_error": null
+      }
+    }
+  },
+  {
+    "scenario": "overflow",
+    "method": "GET",
+    "route": "/api/v1/evidence/search",
+    "path": "/api/v1/evidence/search",
+    "status": 503,
+    "response": {
+      "error": {
+        "code": "evidence_unavailable",
+        "message": "Searchable incident evidence is temporarily unavailable."
+      }
+    }
   }
 ]

@@ -127,6 +127,7 @@ export type ApiErrorCode =
   | "reservation_conflict"
   | "idempotency_conflict"
   | "invalid_payload"
+  | "evidence_unavailable"
   | "unavailable"
   | "network";
 

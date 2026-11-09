@@ -1,0 +1,64 @@
+{
+  "settings": {
+    "index.mapping.source.mode": "stored"
+  },
+  "aliases": {
+    "backstage-incident-evidence": {
+      "is_write_index": true
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "document_id": {
+        "type": "keyword"
+      },
+      "kind": {
+        "type": "keyword"
+      },
+      "incident_id": {
+        "type": "keyword"
+      },
+      "room_id": {
+        "type": "keyword"
+      },
+      "event_type": {
+        "type": "keyword"
+      },
+      "signal_id": {
+        "type": "keyword"
+      },
+      "event_id": {
+        "type": "keyword"
+      },
+      "trace_id": {
+        "type": "keyword"
+      },
+      "signal_ids": {
+        "type": "keyword"
+      },
+      "origin": {
+        "type": "keyword"
+      },
+      "content_hash": {
+        "type": "keyword"
+      },
+      "occurred_at": {
+        "type": "date"
+      },
+      "received_at": {
+        "type": "date"
+      },
+      "summary": {
+        "type": "text"
+      },
+      "sequence": {
+        "type": "long"
+      },
+      "signals": {
+        "type": "object",
+        "enabled": false
+      }
+    }
+  }
+}

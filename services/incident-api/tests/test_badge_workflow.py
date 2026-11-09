@@ -147,3 +147,27 @@ class BadgeWorkflowTests(TestCase):
             unaged = {**report, "signal_id": "unaged", "data": {**report["data"], "oldest_pending_age_s": 0}}
             self.assertIsNone(self.signal(client, unaged)["incident_id"])
             self.assertEqual(self.request(client, "GET", "/incidents")["items"], [])
+
+    def test_badge_diagnostics_explain_approval_then_acceptance_before_completion_evidence(self):
+        with self.app() as client:
+            report = self.signal(client, self.samples[0])
+            path = f"/incidents/{report['incident_id']}"
+            proposed = self.wait_for_state(client, path, 'plan_proposed')
+            before_approval = self.request(client, 'GET', path + '/diagnostics')['verification']['reason']
+            self.assertIn('approval', before_approval)
+            self.assertNotIn('PDF', before_approval)
+            self.request(client, 'POST', path + '/actions', key='approve-diagnostics', body={
+                'action': 'approve', 'expected_version': proposed['version'],
+                'payload': {'plan_id': proposed['plan']['id']},
+            })
+            dispatched = self.request(client, 'GET', path)
+            before_acceptance = self.request(client, 'GET', path + '/diagnostics')['verification']['reason']
+            self.assertIn('accept', before_acceptance)
+            self.assertNotIn('PDF', before_acceptance)
+            self.request(client, 'POST', path + '/actions', 'it', key='accept-diagnostics', body={
+                'action': 'ack', 'expected_version': dispatched['version'],
+                'payload': {'assignment_id': dispatched['assignment']['id'], 'decision': 'accepted'},
+            })
+            after_acceptance = self.request(client, 'GET', path + '/diagnostics')['verification']['reason']
+            self.assertIn('PDF', after_acceptance)
+            self.assertNotIn('approval', after_acceptance)

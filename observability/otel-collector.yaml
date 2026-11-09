@@ -12,6 +12,9 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+        max_request_body_size: 2097152
+        read_timeout: 5s
+        write_timeout: 5s
         cors:
           allowed_origins:
             - ${env:OTEL_CORS_ALLOWED_ORIGIN:-http://localhost:5173}
@@ -22,8 +25,8 @@ receivers:
 processors:
   memory_limiter:
     check_interval: 1s
-    limit_percentage: 80
-    spike_limit_percentage: 25
+    limit_mib: 384
+    spike_limit_mib: 96
   attributes/scrub:
     actions:
       - key: http.request.header.authorization
@@ -34,11 +37,23 @@ processors:
         action: delete
   batch:
     send_batch_size: 512
+    send_batch_max_size: 512
     timeout: 2s
 
 exporters:
   otlp/dash0:
     endpoint: ${env:DASH0_OTLP_ENDPOINT}
+    timeout: 5s
+    sending_queue:
+      enabled: true
+      num_consumers: 2
+      queue_size: 256
+      block_on_overflow: false
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 5s
+      max_elapsed_time: 15s
     headers:
       Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
       Dash0-Dataset: ${env:DASH0_DATASET:-default}

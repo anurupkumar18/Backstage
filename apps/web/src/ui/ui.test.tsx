@@ -60,6 +60,17 @@ const raise: ProtocolEvent = {
 };
 
 describe("BoardView", () => {
+  it("mounts the isolated evidence inspector for the selected incident", async () => {
+    const user = userEvent.setup();
+    board({
+      incidents: [incident(), incident({ id: "inc-2", summary: "Mic lost" })],
+      renderEvidence: (selected) => <p>Inspecting {selected.id}</p>,
+    });
+    expect(screen.getByText("Inspecting inc-1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Mic lost" }));
+    expect(screen.getByText("Inspecting inc-2")).toBeInTheDocument();
+  });
+
   it("renders buttons only for allowed approve and ack actions", () => {
     const { rerender, view } = board({ incidents: [incident({ allowed_actions: ["approve"] })] });
     expect(screen.getByRole("button", { name: "Approve plan for Room B overflow" })).toBeInTheDocument();

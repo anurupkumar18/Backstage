@@ -1,0 +1,518 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backstage additive incident evidence v1",
+  "$defs": {
+    "projection": {
+      "type": "object",
+      "required": [
+        "status",
+        "checkpoint_revision",
+        "indexed_revision",
+        "watermark_version",
+        "projected_at",
+        "last_error"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "disabled",
+            "pending",
+            "current",
+            "degraded"
+          ]
+        },
+        "checkpoint_revision": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "seq_no",
+                "primary_term"
+              ],
+              "properties": {
+                "seq_no": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "primary_term": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indexed_revision": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "seq_no",
+                "primary_term"
+              ],
+              "properties": {
+                "seq_no": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "primary_term": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "watermark_version": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "projected_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "(Z|[+]00:00)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "enum": [
+                "projection_item_failure",
+                "projection_unavailable",
+                "checkpoint_unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "signal": {
+      "type": "object",
+      "required": [
+        "signal_id",
+        "kind",
+        "source_id",
+        "observed_at",
+        "received_at",
+        "origin"
+      ],
+      "properties": {
+        "signal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+]00:00)$"
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+]00:00)$"
+        },
+        "origin": {
+          "const": "unknown"
+        },
+        "facts": {
+          "type": "object",
+          "required": [
+            "zone",
+            "count",
+            "threshold"
+          ],
+          "properties": {
+            "zone": {
+              "enum": [
+                "door",
+                "seating",
+                "queue"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "threshold": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "event_id",
+        "sequence",
+        "type",
+        "occurred_at",
+        "signal_ids"
+      ],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "type": {
+          "enum": [
+            "raise",
+            "claim",
+            "propose",
+            "approve",
+            "dispatch",
+            "ack",
+            "handoff",
+            "verify",
+            "close",
+            "escalate"
+          ]
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+]00:00)$"
+        },
+        "signal_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "hit": {
+      "type": "object",
+      "required": [
+        "document_id",
+        "kind",
+        "incident_id",
+        "room_id",
+        "event_type",
+        "occurred_at",
+        "received_at",
+        "summary",
+        "signal_id",
+        "event_id",
+        "sequence",
+        "trace_id"
+      ],
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "const": "event"
+        },
+        "incident_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "room_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+]00:00)$"
+        },
+        "received_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "(Z|[+]00:00)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "signal_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?!0{32}$)[0-9a-f]{32}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": [
+        "incident_id",
+        "version",
+        "storage",
+        "provenance",
+        "verification",
+        "signals",
+        "events",
+        "projection",
+        "trace"
+      ],
+      "properties": {
+        "incident_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "storage": {
+          "type": "object",
+          "required": [
+            "mode",
+            "durable"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "memory",
+                "elasticsearch"
+              ]
+            },
+            "durable": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "provenance": {
+          "type": "object",
+          "required": [
+            "origin"
+          ],
+          "properties": {
+            "origin": {
+              "const": "unknown"
+            }
+          },
+          "additionalProperties": false
+        },
+        "verification": {
+          "type": "object",
+          "required": [
+            "status",
+            "reason",
+            "required_duration_s",
+            "observed_duration_s",
+            "evidence_signal_ids"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "pending",
+                "passed",
+                "failed"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "required_duration_s": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "observed_duration_s": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "evidence_signal_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signal"
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/event"
+          }
+        },
+        "projection": {
+          "$ref": "#/$defs/projection"
+        },
+        "trace": {
+          "type": "object",
+          "required": [
+            "trace_id",
+            "url"
+          ],
+          "properties": {
+            "trace_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(?!0{32}$)[0-9a-f]{32}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri",
+                  "maxLength": 2048
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "search": {
+      "type": "object",
+      "required": [
+        "items",
+        "total",
+        "limit",
+        "projection"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/hit"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Exact count of returned authorized hits in this bounded page; not total matching documents."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "projection": {
+          "$ref": "#/$defs/projection"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -167,6 +167,7 @@ input {
 
 .shell__header {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px 24px;
   padding: 24px 0 16px;
   border-bottom: 1px solid var(--border);

@@ -40,7 +40,10 @@ export const MOCK_PRINCIPALS: Record<string, Principal> = {
   "mock-attendee": { id: "attendee-01", tier: 0 },
 };
 
-export function createMockTransport(api: MockIncidentApi, latencyMs = 0): Transport {
+export function createMockTransport(
+  api: MockIncidentApi,
+  latencyMs = 0,
+): Transport {
   return async (request) => {
     if (latencyMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, latencyMs));
@@ -48,11 +51,38 @@ export function createMockTransport(api: MockIncidentApi, latencyMs = 0): Transp
     if (request.signal?.aborted) {
       throw new DOMException("Aborted", "AbortError");
     }
+    if (
+      request.method === "GET" &&
+      (request.path.startsWith("/evidence/search") ||
+        request.path.endsWith("/diagnostics"))
+    ) {
+      const authorized = api.handle({
+        method: "GET",
+        path: request.path.endsWith("/diagnostics")
+          ? request.path.replace(/\/diagnostics$/, "")
+          : "/incidents",
+        headers: request.headers,
+      });
+      if (authorized.status >= 400) return authorized;
+      return {
+        status: 503,
+        json: {
+          error: {
+            code: "evidence_unavailable",
+            message:
+              "Detailed evidence is unavailable in the in-browser mock. Use the live board to inspect recorded history.",
+          },
+        },
+      };
+    }
     const response = api.handle({
       method: request.method,
       path: request.path,
       headers: request.headers,
-      body: request.body === undefined ? undefined : JSON.parse(JSON.stringify(request.body)),
+      body:
+        request.body === undefined
+          ? undefined
+          : JSON.parse(JSON.stringify(request.body)),
     });
     return response;
   };

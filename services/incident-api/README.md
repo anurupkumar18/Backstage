@@ -13,7 +13,7 @@ From the repository root:
     set -a
     . ./.env
     set +a
-    ../../.venv/bin/python -m uvicorn backstage_api.main:create_app --factory --host 127.0.0.1 --port "$API_PORT"
+    ../../.venv/bin/python -m uvicorn backstage_api.main:create_app --factory --no-access-log --host 127.0.0.1 --port "$API_PORT"
 
 Set the web app's API base URL to http://127.0.0.1:8000/api/v1 and disable its mock API when it is ready. The example allows the browser origin http://localhost:5173. Set CORS_ALLOWED_ORIGINS to the actual web origin if it differs.
 
@@ -32,7 +32,7 @@ Use Bearer tokens from the example only for local rehearsal. Enter demo-organize
 
 4. Check that the public view stays in recovery until the last sample. The final timeline event lists the signal IDs that proved recovery.
 
-Use GET /api/v1/status for the public room view and GET /api/v1/incidents for the organizer board. See the [v1 contract](../../contracts/openapi.yaml) for request and response shapes. Room B counts in the shared replay have no session ID, so a session-scoped identity sees an empty list. Report intake, other incident types, and trace export are follow-up work.
+Use GET /api/v1/status for the public room view and GET /api/v1/incidents for the organizer board. See the [v1 contract](../../contracts/openapi.yaml) for request and response shapes. Room B counts in the shared replay have no session ID, so a session-scoped identity sees an empty list. Report intake and other incident types remain follow-up work; optional telemetry export is described below.
 
 Run make check-api from the repository root for the accelerated lifecycle and permissions checks.
 
@@ -63,3 +63,34 @@ To run the integration test with a separate simulator checkout, install the API 
     BADGE_SMOKE_SOURCE=/path/to/ali-checkout/services/badge-simulator make check-api
 
 The test starts both APIs on temporary loopback ports and runs in mock storage mode.
+
+## Inspect and search committed evidence
+
+`GET /api/v1/incidents/{id}/diagnostics` uses the incident's read permission. It reports checkpoint persistence mode, the actual stored signal observation and receipt times, count facts, event/signal references, recovery requirements, projection freshness, and the incident trace ID. Existing signal provenance is `unknown`; neither a source ID nor a replay-shaped signal establishes a live origin. A completed recovery retains its verified duration after samples age. The checkpoint-backed `/events` timeline remains authoritative.
+
+`GET /api/v1/evidence/search` accepts `q` (up to 200 characters), `room_id`, `event_type`, UTC RFC 3339 `from` and `to`, and `limit` (1–50, default 20). The server builds a bounded text query with authorized incident IDs before accessing hits, then rechecks each incident's authorization. The response's `total` counts the returned authorized page, not all possible matches. No user-provided Elasticsearch DSL is accepted. Disabled or unavailable evidence returns an explicit 503, while a genuine empty search returns an empty page and its projection freshness.
+
+Provision the [separate event index](../../data/elasticsearch/README.md#committed-incident-evidence) before setting `EVIDENCE_PROJECTION_ENABLED=true` in live mode. The projector runs every five seconds using an immutable copy of the acknowledged checkpoint, with Elasticsearch work outside the runtime lock. It creates deterministic event IDs, checks existing documents' actual content hashes on conflicts, checks every bulk item, then refreshes before advancing `indexed_revision`. A failure preserves the previous watermark and retries. Restart rebuilds projection coverage from the checkpoint without rewriting or duplicating event documents. The current single-writer requirement remains in force.
+
+## Export application telemetry
+
+Install the pinned requirements, set `OTEL_ENABLED=true`, and use `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` with `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`. Standard `OTEL_EXPORTER_OTLP_HEADERS` supports a server-side exporter credential when needed. Prefer the collector's internal unauthenticated receiver so the vendor credential remains there. `OTEL_SERVICE_NAME` defaults to `incident-api`; `OTEL_RESOURCE_ATTRIBUTES` can set `service.version` and `deployment.environment.name`. `CODE_SHA` is a fallback release value. Export queues are bounded, each exporter request times out after two seconds, and final telemetry shutdown waits at most three seconds. Export failure does not change API outcomes.
+
+Incoming W3C `traceparent` context is extracted. Elasticsearch operations have spans and low-cardinality duration/outcome metrics. `incident.transition.attempt` and `incident.raise.attempt` describe speculative work. Only acknowledged transitions emit `incident.transition` spans, `incident.transition.committed` logs, and `backstage.incident.transitions` counts; later human request spans are linked to those incident spans. Memory-mode commits explicitly carry `storage.mode=memory` and do not claim durable storage.
+
+Application logs are JSON from an allowlist of event/operation/outcome, generated incident/event references, state/storage mode, HTTP method/route/status, count and trace ID. They never include HTTP bodies, queries, authorization headers, idempotency keys, Elasticsearch document bodies or exception contents. Start Uvicorn with `--no-access-log` so its default access log does not independently print query strings. The deployment uses that flag.
+
+Optional `DASH0_TRACE_URL_TEMPLATE` creates a trace link without querying Dash0. It must have one `{trace_id}` placeholder, an HTTPS `dash0.com` host or subdomain, and no userinfo, port or fragment. The [documented Dash0 trace explorer deep link](https://www.dash0.com/docs/dash0/miscellaneous/glossary/deeplink-urls) supports `/goto/traces/explorer?trace_id={trace_id}&org=<uuid>&dataset=default`, with validated optional `from`/`to` relative or UTC timestamps. The documented example alias `traceid` is also accepted. Only these query keys are allowed; duplicate keys, arbitrary filters and credential parameters are rejected. Existing query-free trace paths remain valid. Invalid templates yield a null link. A trace ID/link alone is not evidence that Dash0 ingested it.
+
+Metric contract (duration units are seconds):
+
+| Instrument | Attributes |
+| --- | --- |
+| `backstage.http.requests`, `backstage.http.request.duration` | `method`, `route`, `status_code` |
+| `backstage.persistence.operations`, `backstage.elasticsearch.request.duration` | `operation` = load/save/project/search; `outcome` = success/error |
+| `backstage.incident.transitions` | `event.type`, `state`, `storage.mode` |
+| `backstage.evidence.documents` | `kind=event`, `outcome=success/error` (create/conflict-check attempts) |
+| `backstage.evidence.projection.duration`, `backstage.evidence.search.duration` | `outcome=success/error` |
+| `backstage.evidence.projection.lag` | Checkpoint sequence-number gap, unit `1`; no observation until a real indexed revision exists |
+
+Duration histograms use explicit second boundaries `0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10`. No full deadline/SLO timers are emitted by this implementation. A projection watermark is local to the running projector and is re-established on restart only after all creates/conflicts and refresh succeed.

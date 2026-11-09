@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IncidentEvidence } from "./diagnostics/IncidentEvidence";
 import { createClient, type ApiClient } from "./api/client";
 import { fetchTransport } from "./api/transport";
 import { useBoard } from "./hooks/useBoard";
@@ -51,6 +52,7 @@ function BoardRoute({ client, announce, registerProbe, presence }: BoardRoutePro
   return (
     <BoardView
       presence={presence}
+      renderEvidence={(incident) => <IncidentEvidence key={incident.id} incident={incident} client={client} mockMode={MOCK_MODE} />}
       incidents={board.incidents}
       eventsById={board.eventsById}
       actionState={actions.actionState}
@@ -100,6 +102,8 @@ export default function App() {
       }),
     [mockApi, token],
   );
+  // Opaque generation resets scoped caches, actions and inspector state even for the same role.
+  const credentialGeneration = useMemo(() => crypto.randomUUID(), [client]);
 
   const registerProbe = useCallback((next: (() => void) | null) => {
     probe.current = next;
@@ -142,14 +146,14 @@ export default function App() {
       devPanel={devPanel}
     >
       {route === "history" ? (
-        <HistoryView key={`history-${identityId}-${token}`} client={client} mockMode={MOCK_MODE} />
+        <HistoryView key={`history-${identityId}-${credentialGeneration}`} client={client} mockMode={MOCK_MODE} />
       ) : route === "me" && identity && identity.tier > 0 ? (
-        <InboxRoute token={token} key={`inbox-${identityId}-${token}`} client={client} identity={identity} announce={setAnnouncement} />
+        <InboxRoute token={token} key={`inbox-${identityId}-${credentialGeneration}`} client={client} identity={identity} announce={setAnnouncement} />
       ) : route === "board" ? (
-        <BoardRoute key={`board-${identityId}-${token}`} presence={presence} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
+        <BoardRoute key={`board-${identityId}-${credentialGeneration}`} presence={presence} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
       ) : (
         <StatusRoute
-          key={`${route}-${identityId}-${token}`}
+          key={`${route}-${identityId}-${credentialGeneration}`}
           presence={presence}
           joinUrl={joinUrl}
           client={client}

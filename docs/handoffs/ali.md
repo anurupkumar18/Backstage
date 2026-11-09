@@ -1,5 +1,7 @@
 # Ali · Badge simulator, Radar, and Kubernetes
 
+Read the [team updates](README.md) before work and append a note in your lane's log with every push.
+
 Read the [full team handoff](../../BACKSTAGE-team-agent-handoff.md), then branch from `main` with `git switch -c ali/badge-simulator`. Own `services/badge-simulator/`, `deploy/platform/`, `deploy/badge/`, and `docs/radar/`. Keep the Radar adapter under `services/badge-simulator/radar/`.
 
 1. Run `make smoke SCENARIO=badge_stall` and review the [badge contract](../../contracts/badge.v1.schema.json), [badge replay](../../fixtures/shared/badge_stall.signals.jsonl), and [HTTP examples](../../fixtures/shared/http.examples.json). Seed `badge-job-001`, `badge-job-002`, and `badge-job-003`.

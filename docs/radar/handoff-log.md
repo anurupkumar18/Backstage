@@ -83,3 +83,25 @@ Badge simulator, Radar, and Kubernetes. Newest entries at the bottom. See the [t
 - **Verified** · The 422 responses are in the uvicorn log. The badge test suite passed after the merge, and so did `make check`.
 - **Open** · The owners.json Ali login (`AhmedShAli24`) on `main`, and the badge_stall incident flow in the API (Luke).
 - **Reviewed** · main at 2555f30, luke/overflow-api at 1911b12, luke/elastic-overflow at de2884e, and this lane's branches at e137f36 and 61f7062.
+
+## 2026-11-09 — Incident API connected and approval-gated rehearsal passed on the cluster
+
+- **Branch or PR** · `ali/connect-incident-api`, based on main at ab2798a. Follows Luke's [connection handoff](../handoffs/ali-connect-cluster.md).
+- **Changes and why** ·
+  - **Secrets, without kubectl.** A temporary ServiceAccount, Role and RoleBinding (`secret-writer`) could create Secrets and touch only `incident-secrets` and `badge-secrets`. A one-off Job, `incident-secrets-init`, used it to generate private tokens for every identity in `services/incident-api/.env.example` into `incident-secrets.AUTH_TOKENS_JSON`. The same Job set `badge-secrets.BADGE_SIGNAL_TOKEN` to the `badge-simulator` producer token. No value left the cluster. The access objects were deleted afterwards. Luke then added the three Elastic fields through Radar's Secret editor (see his log).
+  - **Deploy.** Radar applied `incident-bootstrap`, `Service/incident-api` and `Deployment/incident-api`, with the API at pinned commit `8e61ac90ada0469e3d12c817656a166f80222ef1`, factory start, `APP_MODE=live`. `/readyz` returned 200 against the `backstage-demo` alias.
+  - **Connect.** Set `badge-config.INCIDENT_API_BASE_URL` to `http://incident-api:8000/api/v1` and restarted badge-control and both stations. Badge code is still at `bed1fd37f38877ff82c7e2df6433ef3a15a19872`, and `RADAR_MODE` is still `mock`.
+  - **Repo.** Persisted that URL in `deploy/badge/badge-config.yaml` and added `../incident` to `deploy/platform/kustomization.yaml` (`kubectl kustomize deploy/platform` renders 9 objects). Added `deploy/badge/incident-rehearsal-job.yaml`, the exact Job that ran.
+- **Rehearsal result (team-backstage, 20:35 UTC)** · `badge-station-a` scaled to 0, and its pod was gone before seeding.
+  - Incident `inc-badge-stall-8dbc37d0ffb04358b15576eb10015d38` reached `plan_proposed` 12 s after seeding, at priority high. Plan: "Reroute 3 badge jobs from Station A to Station B", with a mock diagnosis.
+  - The organizer approved it (200 → `approved`). It was dispatched to `it-staff-01`, who accepted (200 → `accepted`).
+  - The API drove the reroute. Station B completed `badge-job-001..003` as `pdf-badge-job-001..003`.
+  - The incident resolved at version 8, verification `passed`: "Station B completed all affected jobs and confirmed their PDF references".
+  - Timeline: `raise, claim, propose, approve, dispatch, ack, verify, close`. `close` evidence: `badge_job_complete-badge-job-001-90d27cc0`, `-002-f8bb53b5`, `-003-b2aed147`.
+  - Ended with REHEARSAL PASSED. `badge-station-a` was restored to 1/1 afterwards, and badge-control, both stations and incident-api are all 1/1.
+- **Impact by lane** ·
+  - **Kunj:** the namespace is `team-backstage`. The API is at `http://incident-api:8000` in-cluster. The organizer, IT and other role tokens exist only in `incident-secrets.AUTH_TOKENS_JSON`. Read them through Radar's Secret view, not from Git. `CORS_ALLOWED_ORIGINS` is `http://localhost:5173`; tell Ali if the board's origin differs. `deploy/web` and `deploy/dash0` aren't in the platform overlay yet. dash0 needs the `dash0-credentials` Secret first, and web crash-loops until `otel-collector` exists.
+  - **Luke:** the incident Secret's tokens were generated in the cluster. Don't apply your local `.env.cluster` over them.
+- **Verified** · Badge tests passed (35), including new overlay and job checks. `make check` passed. Cluster evidence is from Radar `wait_for` and `get_workload_logs` on the Jobs and Deployments named above.
+- **Open** · In-cluster diagnosis is `mock` until Radar issues a service token. The badge queue is in memory, so restarting badge-control drops queued jobs. The `dash0-credentials` Secret and the web/dash0 overlay entries are Kunj's dependencies. The browser HTTPS path for the stage mic is still open.
+- **Reviewed** · main at ab2798a: Luke's Elastic and Radar Secret entry, Kunj's web, observability and codex handoffs (`docs/demo/handoff-log.md`, `dependencies.md`, `codex-handoff.md`), and `docs/handoffs/ali-connect-cluster.md`.

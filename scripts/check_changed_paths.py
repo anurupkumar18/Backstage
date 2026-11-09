@@ -24,6 +24,11 @@ def owner_for(path, owners):
     )
 
 
+def matches_grant(path, grant):
+    """Trailing slash grants a directory; other grants name one exact file."""
+    return path.startswith(grant) if grant.endswith("/") else path == grant
+
+
 def main():
     parser = argparse.ArgumentParser()
     for name in ("base", "head", "author", "branch"):
@@ -31,14 +36,17 @@ def main():
     args = parser.parse_args()
     owners = json.loads(Path(".github/owners.json").read_text(encoding="utf-8"))
     lane, _, feature = args.branch.partition("/")
-    settings = owners["lanes"].get(lane)
+    contributor = owners.get("contributors", {}).get(lane)
+    settings = contributor or owners["lanes"].get(lane)
     if not feature or not settings or not settings["github_login"]:
         parser.exit(1, f"Branch {args.branch!r} has no active ownership lane.\n")
     if args.author.casefold() != settings["github_login"].casefold():
         parser.exit(1, f"{args.author!r} is not assigned to the {lane!r} lane.\n")
-    rejected = [
-        path for path in changed_paths(args.base, args.head) if owner_for(path, owners) != lane
-    ]
+    paths = changed_paths(args.base, args.head)
+    if contributor is not None:
+        rejected = [path for path in paths if not any(matches_grant(path, grant) for grant in contributor["paths"])]
+    else:
+        rejected = [path for path in paths if owner_for(path, owners) != lane]
     if rejected:
         parser.exit(1, "Paths outside the assigned lane:\n" + "\n".join(map(repr, rejected)) + "\n")
     print(f"Changed paths are within the {lane} lane.")

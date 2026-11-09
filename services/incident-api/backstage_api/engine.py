@@ -1,10 +1,9 @@
-"""In-memory incident lifecycle and count evidence for the Room B demo."""
+"""Incident lifecycle and count evidence for the Room B demo."""
 
 from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from threading import Lock
 from typing import Literal
 from uuid import uuid4
 
@@ -154,11 +153,11 @@ class Incident:
 
 
 class IncidentStore:
-    """One writer in the demo. The caller holds the lock for each request or tick."""
+    """Apply lifecycle commands inside a runtime transaction."""
 
     def __init__(self, tracer):
         self.tracer = tracer
-        self.lock = Lock()
+        self.mutation_count = 0
         self.incidents = {}
         self.active = {}
         self.room_evidence = {}
@@ -195,6 +194,7 @@ class IncidentStore:
             })
             incident.state = destination
             incident.updated_at = now
+            self.mutation_count += 1
 
     def ingest(self, signal, now):
         signal_id = signal["signal_id"]
@@ -222,6 +222,7 @@ class IncidentStore:
 
         incident_id = incident.id if incident is not None else None
         self.signals[signal_id] = (signal, now, incident_id)
+        self.mutation_count += 1
         return self.signal_receipt(signal_id, incident_id, deduplicated=False)
 
     @staticmethod
@@ -323,7 +324,6 @@ class IncidentStore:
                 raise ApiError(409, "idempotency_conflict", "This action key has a different payload.")
             return deepcopy(result)
 
-        self.tick(now)
         if action != "approve" and actor.tier == 2 and (
             incident.assignment is None or actor.id != incident.assignment["assignee_id"]
         ):

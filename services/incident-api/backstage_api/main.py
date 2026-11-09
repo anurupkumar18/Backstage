@@ -3,10 +3,12 @@
 import asyncio
 import logging
 import os
+import re
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timezone
 from typing import Annotated
 
+from elasticsearch import Elasticsearch
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +18,8 @@ from opentelemetry.sdk.trace import TracerProvider
 from pydantic import TypeAdapter
 
 from .contracts import validate_action, validate_signal
-from .engine import ApiError, Identity, IncidentStore
+from .engine import ApiError, Identity
+from .persistence import ElasticsearchCheckpoint, IncidentRuntime
 
 LOGGER = logging.getLogger("backstage.incident_api")
 ROOMS = {"room-b": "Room B", "room-c": "Room C"}
@@ -26,24 +29,47 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
-def create_app(*, clock=utc_now, identities=None, tracer_provider=None):
-    if os.getenv("APP_MODE", "mock") != "mock":
-        raise RuntimeError("The Room B API currently supports APP_MODE=mock.")
+def configured_checkpoint():
+    mode = os.getenv("APP_MODE", "mock")
+    if mode == "mock":
+        return None
+    if mode != "live":
+        raise RuntimeError("APP_MODE must be mock or live.")
+    url = os.getenv("ELASTICSEARCH_URL")
+    api_key = os.getenv("ELASTICSEARCH_API_KEY")
+    prefix = os.getenv("ELASTICSEARCH_INDEX_PREFIX", "backstage")
+    if not url or not api_key:
+        raise RuntimeError("Set ELASTICSEARCH_URL and ELASTICSEARCH_API_KEY for APP_MODE=live.")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", prefix):
+        raise RuntimeError("ELASTICSEARCH_INDEX_PREFIX must be a lowercase index prefix.")
+    client = Elasticsearch(url, api_key=api_key, request_timeout=5, max_retries=0)
+    return ElasticsearchCheckpoint(client, f"{prefix}-overflow-state")
+
+
+def create_app(*, clock=utc_now, identities=None, tracer_provider=None, checkpoint=None):
     if identities is None:
         identities = TypeAdapter(dict[str, Identity]).validate_json(os.getenv("AUTH_TOKENS_JSON", "{}"))
     if tracer_provider is None:
         tracer_provider = TracerProvider(shutdown_on_exit=False)
     tracer = tracer_provider.get_tracer("backstage.incident-api")
-    store = IncidentStore(tracer)
+    runtime = IncidentRuntime(tracer, configured_checkpoint() if checkpoint is None else checkpoint)
+
+    def in_state(operation):
+        def execute(store):
+            now = clock()
+            store.tick(now)
+            return operation(store, now)
+
+        return runtime.run(execute)
 
     def advance_deadlines():
-        with store.lock:
-            store.tick(clock())
+        runtime.run(lambda store: store.tick(clock()))
 
     async def watch_deadlines():
         while True:
             await asyncio.sleep(1)
-            await asyncio.to_thread(advance_deadlines)
+            with suppress(ApiError):
+                await asyncio.to_thread(advance_deadlines)
 
     @asynccontextmanager
     async def lifespan(_app):
@@ -54,6 +80,7 @@ def create_app(*, clock=utc_now, identities=None, tracer_provider=None):
             watcher.cancel()
             with suppress(asyncio.CancelledError):
                 await watcher
+            await asyncio.to_thread(runtime.close)
 
     app = FastAPI(title="Backstage Incident API", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
@@ -93,8 +120,12 @@ def create_app(*, clock=utc_now, identities=None, tracer_provider=None):
         return actor
 
     @app.get("/healthz")
-    @app.get("/readyz")
     def health():
+        return {"status": "ok"}
+
+    @app.get("/readyz")
+    def ready():
+        runtime.check()
         return {"status": "ok"}
 
     @app.post("/api/v1/signals", status_code=202)
@@ -109,17 +140,14 @@ def create_app(*, clock=utc_now, identities=None, tracer_provider=None):
             raise ApiError(403, "forbidden", "This token cannot submit the requested source or location.")
         if body["kind"] != "zone_count" or body["data"]["zone"] not in {"seating", "door"}:
             raise ApiError(422, "invalid_payload", "This demo only accepts seating and door counts.")
-        with store.lock:
-            now = clock()
-            store.tick(now)
-            return store.ingest(body, now)
+        return in_state(lambda store, now: store.ingest(body, now))
 
     @app.get("/api/v1/status")
     def public_status(actor: Identity = Depends(caller)):
         if actor.tier is None:
             raise ApiError(403, "forbidden", "This token is scoped to signal ingress.")
-        with store.lock:
-            store.tick(clock())
+
+        def project(store, _now):
             rooms = []
             for room_id, label in ROOMS.items():
                 incident = store.active.get(room_id)
@@ -129,27 +157,30 @@ def create_app(*, clock=utc_now, identities=None, tracer_provider=None):
                 rooms.append({"room_id": room_id, "label": label, "status": status, "accessibility_status": None})
             return {"rooms": rooms, "sessions": []}
 
+        return in_state(project)
+
     @app.get("/api/v1/incidents")
     def list_incidents(actor: Identity = Depends(caller)):
         if actor.tier in {None, 0}:
             raise ApiError(403, "forbidden", "Incident access requires an authorized role.")
-        with store.lock:
-            store.tick(clock())
+
+        def list_scoped(store, _now):
             scoped = (incident for incident in store.incidents.values() if actor.can_read(incident))
             newest = sorted(scoped, key=lambda incident: incident.updated_at, reverse=True)
             return {"items": [incident.view(actor) for incident in newest], "next_cursor": None}
 
+        return in_state(list_scoped)
+
     @app.get("/api/v1/incidents/{incident_id}")
     def incident_detail(incident_id: str, actor: Identity = Depends(caller)):
-        with store.lock:
-            store.tick(clock())
-            return store.read(incident_id, actor).view(actor)
+        return in_state(lambda store, _now: store.read(incident_id, actor).view(actor))
 
     @app.get("/api/v1/incidents/{incident_id}/events")
     def incident_events(incident_id: str, actor: Identity = Depends(caller)):
-        with store.lock:
-            store.tick(clock())
+        def timeline(store, _now):
             return {"items": list(store.read(incident_id, actor).events), "next_cursor": None}
+
+        return in_state(timeline)
 
     @app.post("/api/v1/incidents/{incident_id}/actions")
     def incident_action(
@@ -159,7 +190,6 @@ def create_app(*, clock=utc_now, identities=None, tracer_provider=None):
         actor: Identity = Depends(caller),
     ):
         validate_action(body, key)
-        with store.lock:
-            return store.apply_action(incident_id, actor, key, body, clock())
+        return in_state(lambda store, now: store.apply_action(incident_id, actor, key, body, now))
 
     return app

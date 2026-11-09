@@ -1,0 +1,68 @@
+"""Private in-cluster release smoke. Never prints role or ephemeral credentials."""
+import json
+import os
+from pathlib import Path
+import tempfile
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+
+base = os.environ.get('WEB_BASE_URL', 'http://web').rstrip('/')
+identities = json.loads(os.environ['AUTH_TOKENS_JSON'])
+human = next(token for token, identity in identities.items() if identity.get('tier') == 3)
+producer = next(token for token, identity in identities.items() if 'tier' not in identity)
+
+
+def request(path, expected, token=None, body=None, headers=None):
+    outgoing = dict(headers or {})
+    if token:
+        outgoing['Authorization'] = 'Bearer ' + token
+    try:
+        response = urlopen(Request(base + path, data=body, headers=outgoing), timeout=30)
+    except HTTPError as error:
+        response = error
+    status = response.code
+    data = response.read()
+    print(path, status, flush=True)
+    if status != expected:
+        raise SystemExit('Unexpected HTTP status; response content suppressed.')
+    return data
+
+
+request('/healthz', 200)
+request('/', 200)
+request('/stage.html', 200)
+request('/api/v1/incidents', 401)
+request('/api/v1/incidents', 200, human)
+annotations = json.loads(request('/demo/conference-detections.json', 200))
+assert len(annotations['frames']) == 120
+request('/demo/conference-30s.mp4', 206, headers={'Range': 'bytes=0-31'})
+health = json.loads(request('/camera/healthz', 200))
+assert health['status'] == 'ready'
+# Only the public prerecorded clip is downloaded for this smoke, never a user's camera.
+with tempfile.TemporaryDirectory() as folder:
+    path = Path(folder) / 'clip.mp4'
+    path.write_bytes(request('/demo/conference-30s.mp4', 200))
+    import cv2
+    cap = cv2.VideoCapture(str(path))
+    ok, frame = cap.read()
+    cap.release()
+    assert ok
+    frame = cv2.resize(frame, (640, 360))
+    ok, jpeg = cv2.imencode('.jpg', frame)
+    assert ok
+    body = jpeg.tobytes()
+    headers = {'Content-Type': 'image/jpeg'}
+    request('/camera/detect', 401, body=body, headers=headers)
+    request('/camera/detect', 403, producer, body, headers)
+    result = json.loads(request('/camera/detect', 200, human, body, headers))
+    assert result['model'] == 'yolo26n.pt' and len(result['boxes']) > 0
+    print('Real YOLO people:', len(result['boxes']), 'inference ms:', result['inference_ms'], flush=True)
+for path in ('/_vision_authorize', '/presence/reset', '/openai/realtime/token', '/openai/transcription/token'):
+    request(path, 404)
+if os.environ.get('CHECK_VOICE') == '1':
+    result = json.loads(request('/openai/briefing/token', 200, human, b'{}', {'Content-Type': 'application/json'}))
+    assert isinstance(result.get('value'), str) and len(result['value']) > 0
+    assert set(result['allowed_tools']) == {'get_status', 'list_incidents', 'get_incident_events'}
+    print('OpenAI ephemeral briefing mint verified; credential discarded.', flush=True)
+    result.clear()
+print('HOSTED RELEASE SMOKE PASSED', flush=True)

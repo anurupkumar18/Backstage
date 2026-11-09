@@ -1,0 +1,138 @@
+# Reuses Ali’s stock-image bootstrap, with a private authenticated vision sidecar.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        - name: build-web
+          image: public.ecr.aws/docker/library/node:22-alpine
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: CODE_REPO
+              value: lukeeskinner/Backstage
+            - name: CODE_SHA
+              value: c43885a9a3d72fecc67fc0a80413bae1226cc532
+            - name: npm_config_cache
+              value: /work/npm-cache
+            - name: VITE_API_BASE_URL
+              value: /api/v1
+            - name: VITE_MOCK_API
+              value: "false"
+            - name: VITE_ENABLE_VOICE
+              value: "true"
+            - name: VITE_BROWSER_OTLP_URL
+              value: ""
+          command:
+            - sh
+            - -ec
+            - |
+              case "$CODE_SHA" in *[!0-9a-f]*|"") echo "CODE_SHA must be a commit SHA"; exit 1;; esac
+              mkdir -p /work/src /nginx-conf/vision /runtime/camera
+              wget -qO /work/src.tgz "https://codeload.github.com/$CODE_REPO/tar.gz/$CODE_SHA"
+              tar -xzf /work/src.tgz -C /work/src --strip-components=1
+              cd /work/src/apps/web
+              npm ci --no-audit --no-fund
+              npm run build
+              cp -R dist/. /site/
+              cp /work/src/deploy/web/nginx.conf /nginx-conf/default.conf
+              cp -R server/. /runtime/server/
+              cp -R camera/. /runtime/camera/
+              cp /work/src/deploy/web/vision.conf /nginx-conf/vision/routes.conf
+              echo "built web at $CODE_REPO@$CODE_SHA"
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 1536Mi}
+          volumeMounts:
+            - {name: work, mountPath: /work}
+            - {name: site, mountPath: /site}
+            - {name: nginx-conf, mountPath: /nginx-conf}
+            - {name: runtime, mountPath: /runtime}
+        - name: install-vision
+          image: public.ecr.aws/docker/library/python:3.11-slim
+          command: [sh, /app/camera/bootstrap.sh]
+          env:
+            - {name: PYTHONUNBUFFERED, value: "1"}
+            - {name: PIP_NO_CACHE_DIR, value: "1"}
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 500m, memory: 1Gi}
+            limits: {cpu: "2", memory: 3Gi}
+          volumeMounts:
+            - {name: runtime, mountPath: /app, readOnly: true}
+            - {name: vision, mountPath: /vision}
+      containers:
+        - name: web-runtime
+          image: public.ecr.aws/docker/library/node:22-alpine
+          command: [node, server/index.mjs]
+          workingDir: /app
+          env:
+            - name: PRESENCE_HOST
+              value: 127.0.0.1
+            - name: PRESENCE_PORT
+              value: "8787"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          volumeMounts:
+            - {name: runtime, mountPath: /app}
+        - name: web
+          image: public.ecr.aws/nginx/nginx:stable-alpine
+          volumeMounts:
+            - {name: site, mountPath: /usr/share/nginx/html, readOnly: true}
+            - {name: nginx-conf, mountPath: /etc/nginx/conf.d, readOnly: true}
+        - name: vision
+          image: public.ecr.aws/docker/library/python:3.11-slim
+          command: [/vision/venv/bin/python, /app/camera/vision.py, --model, /vision/yolo26n.pt]
+          env:
+            - {name: PYTHONUNBUFFERED, value: "1"}
+            - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+            - {name: YOLO_CONFIG_DIR, value: /tmp/ultralytics}
+            - {name: YOLO_OFFLINE, value: "1"}
+            - {name: OMP_NUM_THREADS, value: "2"}
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          startupProbe:
+            exec:
+              command: [/vision/venv/bin/python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8766/healthz', timeout=2)"]
+            periodSeconds: 5
+            failureThreshold: 60
+            timeoutSeconds: 3
+          readinessProbe:
+            exec:
+              command: [/vision/venv/bin/python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8766/healthz', timeout=2)"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "2", memory: 2Gi}
+          volumeMounts:
+            - {name: runtime, mountPath: /app, readOnly: true}
+            - {name: vision, mountPath: /vision, readOnly: true}
+      volumes:
+        - {name: vision, emptyDir: {sizeLimit: 5Gi}}
+        - {name: work, emptyDir: {}}
+        - {name: site, emptyDir: {}}
+        - {name: nginx-conf, emptyDir: {}}
+        - {name: runtime, emptyDir: {}}

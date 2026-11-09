@@ -184,3 +184,24 @@
 - **Changes and why** · Presence people are drawn as wobbling jelly blobs with blinking eyes instead of circles (apps/web/src/ui/PresenceField.tsx); caption and join copy say blob. Departure Mono (OFL, apps/web/public/fonts) is used for tier, state and card-meta labels, and incident cards lift on hover with a reduced-motion guard.
 - **Verified commands and results** · 133 frontend tests pass; typecheck clean apart from missing @dash0/sdk-web in a borrowed node_modules, which also fails 4 test files and the Vite build on untouched origin/main. Not verified in a browser. Live OpenAI calls not run: no key in this shell, and the server tests mock fetch.
 - **Open issues and next owner or action** · Eyeball the blobs at projector size; board filter tabs and a resolve celebration were not built.
+
+
+## 2026-11-09 — Hosted vision and existing-cluster rollout
+
+- **Branch or PR** · `kunj/hosted-vision`, integrating main5e90f3b including PR24 blobs without reverting upstream UI work.
+- **Changes and why** · User asked to run the whole demo on the existing Kubernetes cluster. Added a web-owned stock-image cluster overlay with private loopback YOLO, CPU dependency lock and verified model SHA; optional nginx include verifies role bearers against incident status before inference. Browser sends the selected role bearer, resets video state on credential changes, discloses remote sampled-frame processing and retries429 without turning detection off. Static image retains recorded mode and503 camera routes.
+- **Verified** ·147 frontend tests and TypeScript/build passed before the upstream blob integration. Linux Docker actual YOLO frame returned10 detections;4 Python boundary tests passed. nginx auth_request smoke denied missing/invalid401 and producer403, allowed a test human200 with10 real boxes, and kept internal auth404, private OpenAI/reset404. Overlay strict kubeconform:2 valid resources. Final integrated checks and deployment evidence follow.
+- **Cluster actions** · Through authenticated Radar UI, repinned existing Deployment/web from babe5d2 to merged395ed2b; observed web1/1 healthy. Created web-openai Secret from the user-supplied key using the Secret editor; no value in Git or logs. Existing Elastic/role Secrets and badge workloads preserved. No hosted vision or public route claim yet.
+- **Dependencies** · Existing HTTPRoute/app points backstage.cnh.radarhq.io to the placeholder Service/app through Gateway gateway/cnh HTTPS. It can route to web after explicit public-exposure confirmation; Argo tracking may reconcile. Collector is still0 pending Dash0 credentials. Badge diagnosis remainsmock. No physical camera, microphone or real paid call established yet.
+- **Reviewed** · main395ed2b then5e90f3b/PR24; Ali deploy-web7aaa1f6 then07f1169 (LoadBalancer quota rejection/reversion), Luke478a3f4, Anurupf536b757/PR22 and current main handoffs. New files stay in Kunj’s owned paths; no shared contract or edge changes.
+
+- Final integrated checks:147 UI,30 Node,4 Linux Python tests pass; TypeScript and production Docker build pass. The in-cluster source pin is3de777b3792e96e80050c55bd10cf1a5de25db69; the smoke Job uses the existing incident Secret in-cluster and suppresses all credential/response values. Its exact tool-name assertion was corrected before publication.
+
+
+## 2026-11-09 — Isolate hosted detector rate budgets
+
+- **Branch or PR** · `kunj/hosted-vision`, PR25 Gitar follow-up.
+- **Change** · Gitar identified that all gateway clients share a remote IP and the detector used the telemetry bucket. Added a separate vision_detect zone keyed by Authorization at4r/s with burst4, preserving the independent telemetry limit. Unauthenticated callers still fail the auth_request gate; bearer values never enter access logs. No untrusted X-Forwarded-For trust was added.
+- **Verified** · nginx configuration/auth tests run against real Linux YOLO, and CI scaffold/changed-paths were green on the previous head. Final pin/rollout evidence follows. Public HTTPS backend change was explicitly approved by the user; original route and Deployment saved for rollback. No credential fields were altered by this patch.
+
+- Release pin: c43885a9a3d72fecc67fc0a80413bae1226cc532. Actual nginx smoke returned200 with10 real person boxes immediately after25 telemetry POSTs, verifying separate budgets. Source remains published before cluster download.

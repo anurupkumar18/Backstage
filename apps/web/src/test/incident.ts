@@ -9,4 +9,3 @@ export function incident(overrides: Partial<Incident> = {}): Incident {
     ...overrides,
   };
 }
-

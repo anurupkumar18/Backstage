@@ -62,3 +62,12 @@
 - **Verified commands and results** · Node 22: TypeScript and production build pass; 91 Vitest tests pass, including keyboard approve, stale 409 requiring another human action, attendee read isolation, token submit and timeline retry; presence server 8/8 remains valid. `make check check-api` passes: 3 contract tests and 16 API tests (2 opt-in integration tests skipped). Used a fresh isolated Python environment because the original .venv lacked service dependencies. Real FastAPI on loopback: canonical 30-second trigger → organizer keyboard approval → staff keyboard acceptance → canonical 60-second clearing replay → inbox Verified and attendee public Normal. Speaker `demo-session` sees no overflow. Phone layout checked at 390 × 844. Local evidence incident `inc-overflow-52de33af3bd041b295cdbae6b9936303`; synthetic, in-memory storage only.
 - **Open issues and next owner or action** · Agent activity, floor brief, voice, installable shell and report intake are later phases. Report intake and live stage support still need Luke. Camera lane ownership is still unassigned.
 - **References and latest handoffs reviewed** · `main@cfc4451`; PR #12 recovery `090bb60` and Gitar token-entry fix `4d2d5c6`; Luke cluster `478a3f4`, Ali badge Kubernetes `408d198`, and lane logs referenced in the preceding entries. Local API README and replay script reviewed for the live rehearsal.
+
+## 2026-11-09 — Align the inbox branch with PR #12
+
+- **Branch or PR** · `kunj/personal-inbox`, merging `kunj/phone-join@4d2d5c6` as its base.
+- **Changes and why** · Preserved both appended handoffs while resolving the log-only merge conflict; aligned ancestry with the token-entry fix so the stacked PR diff contains the inbox only. Removed an extra fixture-helper EOF blank line.
+- **Impact by lane** · No runtime or contract change.
+- **Verified commands and results** · `git diff --check` passes; same code as the 91-test, TypeScript/build and live-browser verified inbox entry above.
+- **Open issues and next owner or action** · Merge PR #12 before the inbox and retarget the inbox to main.
+- **References and latest handoffs reviewed** · PR #12 `4d2d5c6`, inbox `5578951`; no new remote dependencies.

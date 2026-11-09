@@ -2,6 +2,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { Route } from "../ui/types";
 
 function parse(hash: string): Route {
+  if (hash.startsWith("#/join")) return "join";
   if (hash.startsWith("#/status")) {
     return "status";
   }

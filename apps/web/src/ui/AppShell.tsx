@@ -1,4 +1,4 @@
-import { useId, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
 import "../styles.css";
 import { EVENT } from "../venue/kubecon-na-2026";
 import type { Identity, Route } from "./types";
@@ -38,6 +38,8 @@ export function AppShell({
   children,
   devPanel,
 }: AppShellProps) {
+  const [draftToken, setDraftToken] = useState(token);
+  useEffect(() => setDraftToken(token), [token, activeIdentityId]);
   const ids = useId();
   const identityId = `${ids}-identity`;
   const identityHelpId = `${ids}-identity-help`;
@@ -104,17 +106,18 @@ export function AppShell({
                 </div>
               </div>
               {mockMode ? null : (
-                <div className="field">
+                <form className="field" onSubmit={(event) => { event.preventDefault(); onTokenChange(draftToken.trim()); }}>
                   <label htmlFor={tokenId}>API token</label>
                   <input
                     id={tokenId}
                     type="password"
                     autoComplete="off"
                     spellCheck={false}
-                    value={token}
-                    onChange={(event) => onTokenChange(event.target.value)}
+                    value={draftToken}
+                    onChange={(event) => setDraftToken(event.target.value)}
                   />
-                </div>
+                  <button type="submit" className="btn btn--quiet">Use token</button>
+                </form>
               )}
               {active ? (
                 <p className="shell__identity-help" id={identityHelpId}>

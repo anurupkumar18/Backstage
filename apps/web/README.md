@@ -12,7 +12,7 @@ npm test             # vitest: mock store, client rules, schema validation, comp
 npm run build        # tsc --noEmit && vite build
 ```
 
-Routes: `#/` organizer board, `#/status` attendee status, `#/projector` projector view.
+Routes: `#/` organizer board, `#/status` attendee status, `#/projector` projector view, `#/join` anonymous phone check-in. The projector QR uses the current origin; run behind the host’s HTTPS proxy for phones. Check-in only moves a dot and never selects an API identity or grants permissions. Live mode offers venue, IT, backup, speaker and attendee identities with runtime-entered tokens.
 
 ## Modes
 

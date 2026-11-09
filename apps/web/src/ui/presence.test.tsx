@@ -79,7 +79,7 @@ describe("PresenceField", () => {
     }
     expect(container.querySelector("canvas")).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelector('[role="status"], [aria-live]')).toBeNull();
-    expect(screen.getByText("Cameras report people counts only. No frames, faces or identities are stored.")).toBeInTheDocument();
+    expect(screen.queryByText(/names|faces|identities/)).not.toBeInTheDocument();
   });
 
   it("uses singular wording for one person", () => {

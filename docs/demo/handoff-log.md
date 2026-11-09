@@ -26,3 +26,12 @@
 - **Verified commands and results** · Collector 0.164.0 `validate` passed on both configs and a local run answered health, OTLP POST and CORS correctly. `docker build` of the web image passed and nginx routing worked against a stub API. kustomize build plus kubeconform: 2 of 2 valid for web, 4 of 4 for dash0, PrometheusRule valid against the CRD catalog. All YAML parses.
 - **Open issues and next owner or action** · Not applied to a cluster or a Dash0 org. The Dash0 endpoint and MCP are not connected, so the histogram query shape and the Perses dashboard format are unconfirmed. No `.env` or token is in this push; the local collector `.env` stays ignored.
 - **References and latest handoffs reviewed** · main at 8e61ac9, kunj/web-board at 7871ec1, agent-board.
+
+## 2026-11-09 — Codex handoff and floor-agent plan
+
+- **Branch or PR** · kunj/codex-handoff, based on main at 6355f4a. Docs only.
+- **Changes and why** · Added `docs/demo/codex-handoff.md` (repo and branch state, unpushed inventory, sub-agent ledger, environment, rules, prioritised next steps) so Kunj's Codex can continue every thread, and `docs/demo/floor-agent-plan.md` (phone inbox, agent dots, floor brief, installable web app, report triage) for a proactive per-role agent experience specialised for the conference floor.
+- **Impact by lane** · None. No contract, API or manifest change. Luke and Ali: the open asks are listed in the handoff and on the agent board.
+- **Verified commands and results** · Reviewed all merged PRs (#1 to #10) and the lane logs on main; checked local state with tsc (clean) and vitest (68 of 71, three known UI copy failures). No secrets in the diff.
+- **Open issues and next owner or action** · Four local agents (UI, cam-edge, OpenAI, launcher) were still writing files; their output is not in Git yet and ships as separate PRs. Edge lane still has no owner in `.github/owners.json`.
+- **References and latest handoffs reviewed** · main at 6355f4a, luke-log.md through the cluster entry, agent-board.

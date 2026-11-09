@@ -1,10 +1,13 @@
 import { useEffect, useId, useRef } from "react";
+import { AgentActivity } from "./AgentActivity";
+import type { AgentActivity as Activity } from "../inbox/agentActivity";
 import { PRESENCE_TIERS, type PresenceCounts, type PresenceTier } from "../api/types";
 
 export interface PresenceFieldProps {
   counts: PresenceCounts;
   variant: "hero" | "compact";
   maxBlobs?: number;
+  agentActivity?: Activity[];
 }
 
 const TIER_NAME: Record<PresenceTier, { plural: string; singular: string }> = {
@@ -263,7 +266,7 @@ function draw(ctx: CanvasRenderingContext2D, field: Field, now: number, still: b
   ctx.globalAlpha = 1;
 }
 
-export function PresenceField({ counts, variant, maxBlobs = 160 }: PresenceFieldProps) {
+export function PresenceField({ counts, variant, maxBlobs = 160, agentActivity }: PresenceFieldProps) {
   const titleId = useId();
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -394,6 +397,7 @@ export function PresenceField({ counts, variant, maxBlobs = 160 }: PresenceField
       <h2 id={titleId} className="presence__title">
         Checked in
       </h2>
+      {agentActivity ? <AgentActivity activity={agentActivity} /> : null}
       <p className="presence__summary">{summary(counts, total)}</p>
       <div className="presence__stage" ref={stageRef}>
         <canvas ref={canvasRef} className="presence__canvas" aria-hidden="true" />

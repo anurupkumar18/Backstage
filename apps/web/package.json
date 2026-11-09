@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && node --test server/presence.test.mjs",
-    "presence": "node server/presence.mjs",
+    "test": "vitest run && node --test server/*.test.mjs",
+    "presence": "node server/index.mjs",
+    "test:server": "node --test server/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

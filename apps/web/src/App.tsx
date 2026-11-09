@@ -13,6 +13,10 @@ import { LIVE_IDENTITIES } from "./live/identities";
 import { useStatus } from "./hooks/useStatus";
 import { MockIncidentApi } from "./mock/store";
 import { createMockTransport, DEMO_IDENTITIES, MOCK_PRINCIPALS } from "./mock/transport";
+import { VoiceBriefingControl } from "./ui/VoiceBriefingControl";
+import { useInbox } from "./hooks/useInbox";
+import { InboxView } from "./ui/InboxView";
+import type { Identity } from "./ui/types";
 import { AppShell, BoardView, DevPanel, JoinPage, StatusView } from "./ui";
 
 const MOCK_MODE = import.meta.env.VITE_MOCK_API !== "false";
@@ -61,6 +65,14 @@ function BoardRoute({ client, announce, registerProbe, presence }: BoardRoutePro
 function StatusRoute({ client, variant, presence, joinUrl }: { client: ApiClient; variant: "attendee" | "projector"; presence: PresenceCounts | null; joinUrl: string }) {
   const { status, error } = useStatus(client, STATUS_POLL_MS);
   return <StatusView status={status} error={error} variant={variant} presence={presence} joinUrl={variant === "projector" ? joinUrl : undefined} />;
+}
+
+function InboxRoute({ client, identity, announce }: { client: ApiClient; identity: Identity; announce: (message: string) => void }) {
+  const inbox = useInbox(client, identity, announce);
+  return <><InboxView brief={inbox.brief} activity={inbox.activity} items={inbox.items} identity={identity} actionState={inbox.actionState}
+    onAction={(incident, action) => void inbox.run(incident, action)} focusIncidentId={inbox.focusIncidentId}
+    loadError={inbox.loadError} loading={inbox.loading} onMarkSeen={inbox.markSeen} />
+    {import.meta.env.VITE_ENABLE_VOICE === "true" ? <VoiceBriefingControl client={client} tier={identity.tier} announce={announce} /> : null}</>;
 }
 
 export default function App() {
@@ -121,14 +133,16 @@ export default function App() {
       onNavigate={navigate}
       identities={identities}
       activeIdentityId={identityId}
-      onIdentityChange={setIdentityId}
+      onIdentityChange={(id) => { setAnnouncement(""); setIdentityId(id); }}
       mockMode={MOCK_MODE}
       token={token}
-      onTokenChange={(next) => setLiveToken(identityId, next)}
+      onTokenChange={(next) => { setAnnouncement(""); setLiveToken(identityId, next); }}
       announcement={announcement}
       devPanel={devPanel}
     >
-      {route === "board" ? (
+      {route === "me" && identity && identity.tier > 0 ? (
+        <InboxRoute key={`inbox-${identityId}-${token}`} client={client} identity={identity} announce={setAnnouncement} />
+      ) : route === "board" ? (
         <BoardRoute key={`board-${identityId}-${token}`} presence={presence} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
       ) : (
         <StatusRoute

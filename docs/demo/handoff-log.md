@@ -53,3 +53,66 @@
 - **Verified commands and results** · Token-entry regression passes, frontend tests 75/75, TypeScript and production build pass on Node 22. Earlier presence tests 8/8 and keyboard join/projector checks remain valid.
 - **Open issues and next owner or action** · Personal inbox is in progress on `kunj/personal-inbox` and will pick up this commit.
 - **References and latest handoffs reviewed** · PR #12 Gitar inline review; base `main@cfc4451`, original recovery commit `090bb60`, lane handoffs already reviewed in the preceding entry.
+
+## 2026-11-09 — Personal inbox, verified against the real API
+
+- **Branch or PR** · `kunj/personal-inbox`, stacked on `kunj/phone-join` / PR #12; retarget to main once #12 merges.
+- **Changes and why** · Added `#/me`, pure deterministic inbox derivation/copy, phone cards with one API-permitted approve/accept action, priority/recency ordering, verification text and “Why you”. Reuses useBoard and useIncidentActions. Attendees bypass incident reads; speakers receive a session-scope explanation. Marks updates read with a timestamp only and tolerates disabled storage. Role/token switches also clear the prior announcement. Added web agent_docs for these patterns.
+- **Impact by lane** · Contract unchanged at `8b902d2f715d1c068a1f4a10bfb3c850a37abf7a`. Timeline cancellations are handled, failed reads retry without a version bump, denied incident reads clear prior cards. No new backend or external vendor calls.
+- **Verified commands and results** · Node 22: TypeScript and production build pass; 91 Vitest tests pass, including keyboard approve, stale 409 requiring another human action, attendee read isolation, token submit and timeline retry; presence server 8/8 remains valid. `make check check-api` passes: 3 contract tests and 16 API tests (2 opt-in integration tests skipped). Used a fresh isolated Python environment because the original .venv lacked service dependencies. Real FastAPI on loopback: canonical 30-second trigger → organizer keyboard approval → staff keyboard acceptance → canonical 60-second clearing replay → inbox Verified and attendee public Normal. Speaker `demo-session` sees no overflow. Phone layout checked at 390 × 844. Local evidence incident `inc-overflow-52de33af3bd041b295cdbae6b9936303`; synthetic, in-memory storage only.
+- **Open issues and next owner or action** · Agent activity, floor brief, voice, installable shell and report intake are later phases. Report intake and live stage support still need Luke. Camera lane ownership is still unassigned.
+- **References and latest handoffs reviewed** · `main@cfc4451`; PR #12 recovery `090bb60` and Gitar token-entry fix `4d2d5c6`; Luke cluster `478a3f4`, Ali badge Kubernetes `408d198`, and lane logs referenced in the preceding entries. Local API README and replay script reviewed for the live rehearsal.
+
+## 2026-11-09 — Align the inbox branch with PR #12
+
+- **Branch or PR** · `kunj/personal-inbox`, merging `kunj/phone-join@4d2d5c6` as its base.
+- **Changes and why** · Preserved both appended handoffs while resolving the log-only merge conflict; aligned ancestry with the token-entry fix so the stacked PR diff contains the inbox only. Removed an extra fixture-helper EOF blank line.
+- **Impact by lane** · No runtime or contract change.
+- **Verified commands and results** · `git diff --check` passes; same code as the 91-test, TypeScript/build and live-browser verified inbox entry above.
+- **Open issues and next owner or action** · Merge PR #12 before the inbox and retarget the inbox to main.
+- **References and latest handoffs reviewed** · PR #12 `4d2d5c6`, inbox `5578951`; no new remote dependencies.
+
+## 2026-11-09 — Scoped Venue, AV and IT activity dots
+
+- **Branch or PR** · `kunj/agent-activity`, stacked on `kunj/personal-inbox` / PR #13.
+- **Changes and why** · Derives the latest agent-authored event per domain from incident timelines already fetched under the current token. Added labelled dots and relative-time legends to the inbox and optional presence field in both hero and compact variants; BoardView passes its scoped events. Pulses last four seconds and reduced motion disables them. Actor IDs and payload text never enter the legend.
+- **Impact by lane** · No API, token, contract or public-projector changes. Public views do not fetch privileged event timelines. A quiet domain means no activity received in scope, not proof that it is idle.
+- **Verified commands and results** · Frontend 94 tests pass; TypeScript/build pass. Tests cover scope filtering, human-event exclusion, newest-event selection and text labels without an extra live region. Browser against the real local API shows Venue assignment activity and no received AV/IT events in the organizer inbox.
+- **Open issues and next owner or action** · Floor brief and optional voice are next; merge/retarget in order after PRs #12 and #13.
+- **References and latest handoffs reviewed** · Inbox `80313dd`, PR #12 token fix, floor-agent-plan phase 2; earlier lane handoff review remains current.
+
+## 2026-11-09 — Return briefing and optional read-only voice
+
+- **Branch or PR** · `kunj/floor-briefing`; targets main directly because #13 and #15 merged into feature branches after their parent PRs closed. This PR also carries their inbox/activity changes that are absent from main.
+- **Changes and why** · Added a deterministic scoped “While you were away” brief on open and after 60 seconds away, with timestamps only in storage. Loading/denied views do not mark history seen. Recovered the stopped agent’s local OpenAI server and its 19 tests. Added opt-in WebRTC hold-to-talk voice using ephemeral secrets and a fixed read-only executor; no mutation methods, model-supplied URLs, plan prose, actor identities or event payloads enter the voice tool boundary. Microphone tracks mute outside a hold, stop on hide/unmount/disconnect and handle late grants. Voice is disabled by default and the template brief remains usable without a key. Added setup/limitations in openai.md and made npm test include Node server tests.
+- **Impact by lane** · No shared contract or backend edits. `npm run presence` now serves the combined presence/OpenAI process; existing presence URLs are unchanged. `/openai` must stay off the public gateway. Actual stage captions and report intake remain separate dependencies.
+- **Verified commands and results** · Frontend 119 tests pass, including return timing, storage denial, read-only tool rejection, scoped event reads, microphone muting/stopping and batched tool outputs; TypeScript and production build pass. Node server tests 27/27. Browser with a deliberately missing server key returns a clear voice fallback without requesting microphone permission or contacting a vendor. Browser revealed an initial-token remount could incorrectly mark history seen; the active/history gate and regression cover it. Actual audio hardware and a paid Realtime call remain unverified.
+- **Open issues and next owner or action** · Merge directly to main; do not target an already-merged feature branch. Installable shell and report UI remain later phases. Camera ownership and stage/report API support need their owners. Anurup’s ownership PR #16 is open; no changes made there.
+- **References and latest handoffs reviewed** · `origin/main@e9078ed`, Ali connection `cf3fcbd`, Luke log through demo Elastic provisioning, Ali log through the cluster rehearsal, phone `4d2d5c6`, inbox `80313dd`, activity `eeefc9f`, PR #13 Gitar denied-read finding. Official OpenAI protocol references are linked in openai.md; no vendor credentials were read.
+
+## 2026-11-09 — Reload timeline history after a temporary denial
+
+- **Branch or PR** · `kunj/personal-inbox`, PR #13 review follow-up.
+- **Changes and why** · Gitar found that clearing event data after a denied incident read left the successful-version markers behind. Clear those markers together and advance an event epoch, so history reloads at the same incident version and outstanding older reads cannot repopulate the cleared cache.
+- **Impact by lane** · Web polling only; no contract or API change.
+- **Verified commands and results** · Regression reproduces success → 403 → same-version success and confirms two timeline reads. Frontend 92/92, TypeScript and build pass on Node 22.
+- **Open issues and next owner or action** · Dependent activity and briefing branches must merge this fix before review.
+- **References and latest handoffs reviewed** · PR #13 Gitar inline review and inbox `80313dd`; previous reviewed lane handoffs remain current.
+
+## 2026-11-09 — Consolidate directly against main
+
+- **Branch or PR** · `kunj/floor-briefing`, based on `origin/main@e9078ed` after merging latest main.
+- **Changes and why** · Preserved every handoff from the inbox/activity branches and carried the denied-read fix `c00db14` into the same main-targeted PR. PR #13 merged into phone-join after #12 closed, and #15 merged into personal-inbox after #13 closed; neither was present in main. This PR deliberately includes both chunks plus the floor brief/voice work. No force push or teammate file edits.
+- **Impact by lane** · Includes Ali's merged cluster connection and Luke's latest log through normal merge; no shared contract changes. The new API URL still requires securely supplied runtime role tokens and the hosting origin.
+- **Verified commands and results** · Main integration frontend 120 tests, Node server 27 tests, TypeScript/build and diff checks pass. Earlier 390px real-API lifecycle and missing-key voice fallback apply. Browser confirms the first successful staff token entry shows its recent recovery summary.
+- **Open issues and next owner or action** · Target main for this PR. Camera ownership, real microphone/Realtime test, stage captions, report intake and sponsor access remain explicit dependencies.
+- **References and latest handoffs reviewed** · Main `e9078ed`, Ali connection `cf3fcbd`, phone-join `a19eac9`, personal-inbox `66888a3`, activity `eeefc9f`, local cache fix `c00db14`. Contracts remain `8b902d2f715d1c068a1f4a10bfb3c850a37abf7a`.
+
+## 2026-11-09 — Recover camera/gateway test evidence and current next steps
+
+- **Branch or PR** · `kunj/floor-briefing`, PR #17, directly targeting main.
+- **Changes and why** · Added continuation-status.md to supersede the stale implementation inventory and identify what the stopped agents actually left on disk. Camera tests passed 73/73 and gateway tests 10/10; neither code chunk is represented as shipped or live-verified. Recorded the missing launcher, remaining stage/report work and Anurup's Dash0 ownership prerequisite.
+- **Impact by lane** · Camera source remains untouched in the unassigned edge lane. Dash0/evidence is being handled by Anurup; the prerequisite is #16. Ali's published cluster success is attributed to his log, not this session's direct observation.
+- **Verified commands and results** · Camera pytest in its existing .venv, with cache/bytecode output disabled: 73 passed. Gateway node:test: 10 passed. Existing #17 validation remains 120 frontend, 27 Node server, TypeScript/build, and real local API browser lifecycle.
+- **Open issues and next owner or action** · Explicit in continuation-status.md. No real microphone, paid model, cloud telemetry or live crowd claim.
+- **References and latest handoffs reviewed** · PR #17, PR #16 at 98aa8dd, main e9078ed and Ali cf3fcbd; all four stopped-agent inventories checked.

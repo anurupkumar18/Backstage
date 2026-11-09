@@ -1,0 +1,87 @@
+:root {
+  --stage-bg: #ffffff;
+  --stage-fg: #111418;
+  --stage-muted: #4a5360;
+  --stage-border: #8a94a3;
+  --stage-focus: #0b57d0;
+  --stage-fixture-bg: #fff4d6;
+  --stage-fixture-fg: #3d2c00;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --stage-bg: #121416;
+    --stage-fg: #f1f3f5;
+    --stage-muted: #c3c9d1;
+    --stage-border: #6b7480;
+    --stage-focus: #8ab4f8;
+    --stage-fixture-bg: #3a2f10;
+    --stage-fixture-fg: #ffe9a8;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--stage-bg);
+  color: var(--stage-fg);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.stage {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.stage section {
+  border-top: 1px solid var(--stage-border);
+  padding: 0.75rem 0;
+}
+
+.stage button,
+.stage input {
+  font: inherit;
+  margin: 0.25rem 0.5rem 0.25rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--stage-border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+
+.stage button {
+  cursor: pointer;
+}
+
+.stage button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.stage label {
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.stage :focus-visible {
+  outline: 3px solid var(--stage-focus);
+  outline-offset: 2px;
+}
+
+.stage-live {
+  min-height: 1.5rem;
+  color: var(--stage-muted);
+}
+
+.stage-fixture {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  border: 2px dashed var(--stage-border);
+  background: var(--stage-fixture-bg);
+  color: var(--stage-fixture-fg);
+}
+
+.stage-fixture figcaption {
+  font-weight: 700;
+}

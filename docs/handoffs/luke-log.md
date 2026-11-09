@@ -65,3 +65,13 @@
 - **Impact** · GitHub can route code-owner reviews to the whole team. Ali's and Kunj's feature PRs can pass the existing check for their assigned paths.
 - **Verified** · Confirmed write access for both collaborators through GitHub, checked the CODEOWNERS rule against the collaborator list, and ran the changed-path check against Ali's badge Kubernetes branch.
 - **Reviewed** · main at b604095, ali/badge-k8s at 408d198, ali/badge-simulator at e137f36, and agent-board at d3899a9.
+
+## 2026-11-09 — Prepare the combined cluster connection
+
+- **Branch** · luke/connect-badge-cluster, based on main at 8e61ac9.
+- **Changes** · Added the single-writer incident API Kubernetes deployment, pinned runtime bootstrap, and connection command. The API uses the existing badge internal Secret. Connection waits for API readiness before installing the scoped producer token and service URL, preserving Radar credentials.
+- **Impact** · Ali must persist the badge URL and add the incident directory to the aggregate overlay in his lane. Kunj can use the forwarded API with private role tokens. See deploy/incident/README.md for setup and rehearsal gates. Restarting badge-control clears its in-memory queue, so connect between rehearsals.
+- **Open** · This workspace has no cluster access. Ali can deploy through Radar using docs/handoffs/ali-connect-cluster.md. The shared demo Elastic alias and incident Secret must exist before deployment. The combined Kubernetes rehearsal has not run. Radar service-token setup and badge queue persistence remain Ali dependencies.
+- **Reviewed** · main at 8e61ac9, ali/badge-k8s at 408d198, ali/badge-simulator at e137f36, kunj/agent-board-docs at efc6c1f, and the prior Luke badge integration at f72fec2.
+
+- **Verified** · make check passed (3 tests). make check-api with BADGE_SMOKE_SOURCE pointing at the merged simulator passed (14 tests, 1 opt-in live Elastic test skipped). The local HTTP test required localhost binding permission and passed on rerun. Pinned archive extraction, runtime contract presence, standalone YAML rendering, Python syntax, and git diff --check passed. Cluster apply and readiness remain unverified.

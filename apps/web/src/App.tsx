@@ -68,7 +68,7 @@ function StatusRoute({ client, variant, presence, joinUrl }: { client: ApiClient
 
 function InboxRoute({ client, identity, announce }: { client: ApiClient; identity: Identity; announce: (message: string) => void }) {
   const inbox = useInbox(client, identity, announce);
-  return <InboxView items={inbox.items} identity={identity} actionState={inbox.actionState}
+  return <InboxView activity={inbox.activity} items={inbox.items} identity={identity} actionState={inbox.actionState}
     onAction={(incident, action) => void inbox.run(incident, action)} focusIncidentId={inbox.focusIncidentId}
     loadError={inbox.loadError} loading={inbox.loading} onMarkSeen={inbox.markSeen} />;
 }

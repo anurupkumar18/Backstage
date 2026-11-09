@@ -413,6 +413,134 @@ paths:
         description: Internal badge-control
       security:
       - badgeServiceToken: []
+  /api/v1/incidents/{id}/diagnostics:
+    get:
+      operationId: getIncidentDiagnostics
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: ./evidence.v1.schema.json#/$defs/diagnostics
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '503':
+          description: Search projection unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error503'
+        '404':
+          description: Not found or outside scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+      summary: Read committed, scoped diagnostics; checkpoint timeline remains authoritative
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: &id001
+          type: string
+          minLength: 1
+          maxLength: 128
+  /api/v1/evidence/search:
+    get:
+      operationId: searchIncidentEvidence
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: ./evidence.v1.schema.json#/$defs/search
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error401'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        '503':
+          description: Search projection unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceUnavailable'
+        '422':
+          description: Invalid search filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error422'
+      summary: Search a bounded page of authorized committed incident event evidence
+      description: Server constructs the Elasticsearch query and filters authorized
+        incident IDs before search. Rechecks scope before returning hits. total counts
+        returned authorized hits only. Projection can lag the authoritative checkpoint
+        timeline.
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 200
+          default: ''
+      - name: room_id
+        in: query
+        required: false
+        schema: *id001
+      - name: event_type
+        in: query
+        required: false
+        schema:
+          enum:
+          - raise
+          - claim
+          - propose
+          - approve
+          - dispatch
+          - ack
+          - handoff
+          - verify
+          - close
+          - escalate
+      - name: from
+        in: query
+        required: false
+        schema: &id002
+          type: string
+          format: date-time
+          pattern: (Z|[+]00:00)$
+      - name: to
+        in: query
+        required: false
+        schema: *id002
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
 components:
   securitySchemes:
     bearerToken:
@@ -895,6 +1023,26 @@ components:
             message:
               type: string
               minLength: 1
+              maxLength: 240
+          additionalProperties: false
+      additionalProperties: false
+    EvidenceUnavailable:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              enum:
+              - evidence_unavailable
+              - unavailable
+            message:
+              type: string
               maxLength: 240
           additionalProperties: false
       additionalProperties: false

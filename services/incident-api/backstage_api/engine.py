@@ -196,7 +196,7 @@ class IncidentStore:
             raise ApiError(409, "invalid_transition", "The incident is no longer in the required state.")
         event_id = f"{incident.id}-{len(incident.events) + 1}"
         with self.tracer.start_as_current_span(
-            "incident.transition",
+            "incident.transition.attempt",
             context=incident.trace_context,
             attributes={
                 "incident.id": incident.id,
@@ -281,7 +281,7 @@ class IncidentStore:
         kind = "badge-stall" if badge is not None else "overflow"
         incident_id = f"inc-{kind}-{uuid4().hex}"
         room_label = room_id.replace("-", " ").title()
-        with self.tracer.start_as_current_span("incident.raise", attributes={"incident.id": incident_id}) as span:
+        with self.tracer.start_as_current_span("incident.raise.attempt", attributes={"incident.id": incident_id}) as span:
             incident = Incident(
                 id=incident_id,
                 room_id=room_id,

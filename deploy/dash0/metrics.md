@@ -1,52 +1,44 @@
-# Incident timing metrics and the high-priority SLO
+# Measured incident evidence metrics
 
-Four histograms cannot answer "acknowledged within 60 s and resolved within 5 min" for the same incident, and they never see an incident that is still open. So the SLO uses one outcome counter. incident-api records each outcome exactly once, and it uses deadline timers so overdue incidents count as misses. Luke owns emitting these metrics. This file is the contract.
+The backend implementation is the emitter contract. These instruments use resource
+`service.name=incident-api`; `service.version` is the deployed Git SHA and
+`deployment.environment.name=demo`. Metric attributes exclude incident, signal,
+event and trace IDs, search terms, credentials, and room names.
 
-## Metric contract (emitted by `incident-api`)
+| Instrument | Type / unit | Attributes |
+| --- | --- | --- |
+| `backstage.http.requests` | Counter / requests | method, route, status_code |
+| `backstage.http.request.duration` | Histogram / seconds | method, route, status_code |
+| `backstage.persistence.operations` | Counter / operations | operation, outcome |
+| `backstage.elasticsearch.request.duration` | Histogram / seconds | operation, outcome |
+| `backstage.evidence.documents` | Counter / documents | kind, outcome |
+| `backstage.evidence.projection.duration` | Histogram / seconds | outcome |
+| `backstage.evidence.search.duration` | Histogram / seconds | outcome |
+| `backstage.evidence.projection.lag` | Observable gauge / revisions (`1`) | none |
+| `backstage.incident.transitions` | Counter / transitions | event.type, state, storage.mode |
 
-All attributes use underscores, so PromQL can match them without UTF-8 quoting. Each metric carries exactly two attributes: `incident_type` (`overflow`, `stage_av`, `badge_stall`, `reported_problem`) and `incident_priority` (`normal`, `high`). The SLO counter adds the two `slo_*` attributes. Incident IDs, event IDs, staff IDs and room IDs never appear as attributes. They go on spans as `incident.id` and `event.id`.
+Persistence `operation` is `load`, `save`, `search`, or `project`; `outcome=error`
+counts failed operations. Search error rate is the persistence-error panel's
+`operation=search` series. HTTP 4xx includes expected RBAC/conflict failures and
+must be investigated by status/route rather than called a service outage.
+Projection lag is latest committed snapshot revision minus searchable indexed
+revision, **not elapsed time**. Zero lag proves only projector catch-up. It does
+not prove fresh sources, healthy capture, or Dash0 delivery.
 
-| OTel name | Type, unit | Recorded when | Value |
-| --- | --- | --- | --- |
-| `backstage.incident.detection.delay` | histogram, `s` | `raise` commits | detection time minus `occurred_at` of the first qualifying signal |
-| `backstage.incident.dispatch.delay` | histogram, `s` | first `dispatch` commits | first dispatch minus detection |
-| `backstage.incident.acceptance.delay` | histogram, `s` | first `ack` with `decision=accepted` commits | first acceptance minus first dispatch |
-| `backstage.incident.resolution.duration` | histogram, `s` | `close` commits (verified) | resolution minus detection |
-| `backstage.incident.slo.outcomes` | counter, `{incident}` | see below, high priority only | 1 |
+The dashboard uses Dash0's native histogram selectors and `histogram_quantile`
+without `le`; label names are Prometheus-normalized (`service_name`). Queries
+remain empty when an instrument has no samples. Never add `or vector(0)` to
+turn missing telemetry into a passing result. Low request counts make p95
+noisy, so inspect traces and the operation count together.
 
-Histogram bucket boundaries, in seconds: `1, 2, 5, 10, 15, 30, 45, 60, 90, 120, 180, 240, 300, 450, 600, 900`. Boundaries at 60 and 300 keep both deadlines exact.
+This implementation does not emit the original incident timing/SLO contract.
+`slo-check-rules.yaml` is retained as a historical, **inactive proposal** and is
+not in kustomization; do not apply it or claim the 90% lifecycle SLO was measured.
 
-### `backstage.incident.slo.outcomes`
+References checked 2026-11-09:
+- [Dash0 dashboard source format](https://www.dash0.com/docs/dash0/dashboards/reference-dashboard-source-format)
+- [Dash0 native histogram queries](https://www.dash0.com/docs/dash0/telemetry/metrics/write-effective-promql-queries)
+- [Dash0 metric names and labels](https://www.dash0.com/docs/dash0/telemetry/metrics/understand-otel-metric-names)
 
-Extra attributes are `slo_objective` (`ack_60s`, `resolve_300s`, `joint`) and `slo_outcome` (`met`, `missed`). For every high-priority incident, each objective is recorded once:
-
-- `ack_60s`: `met` if the first human acceptance commits within 60 s of detection. `missed` when the 60 s timer fires first. A late acceptance records nothing more.
-- `resolve_300s`: `met` if verified `close` commits within 300 s of detection. `missed` when the 300 s timer fires first. An escalated or still-open incident is caught by the timer.
-- `joint`: `met` only when `resolve_300s` is met and `ack_60s` was met. `missed` as soon as either objective misses.
-
-The timers must survive an API restart. Recompute them from the persisted detection time on startup, and dedupe by `(incident_id, objective)` in the incident document so a retry never double counts.
-
-## Queries (PromQL as Dash0 runs it)
-
-Dash0 selects OTel metrics by `otel_metric_name` because dotted names are not valid Prometheus metric names.
-
-```promql
-# Joint SLO, % met over 1 h (target 90). Swap slo_objective for ack_60s or resolve_300s.
-100 * sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="joint", slo_outcome="met"}[1h]))
-  / sum(increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_objective="joint"}[1h]))
-
-# Misses so far, by objective
-sum by (slo_objective) (increase({otel_metric_name="backstage.incident.slo.outcomes", incident_priority="high", slo_outcome="missed"}[1h]))
-
-# p90 per stage, by type and priority. Repeat for dispatch.delay, acceptance.delay, resolution.duration.
-histogram_quantile(0.9, sum by (incident_type, incident_priority) (rate({otel_metric_name="backstage.incident.detection.delay", otel_metric_type="histogram"}[5m])))
-```
-
-`slo-check-rules.yaml` and `dashboard-incident-timing.yaml` use these exact expressions.
-
-## Verification status
-
-- The formats are Dash0's own: `PrometheusRule` with `dash0-threshold-degraded` and `dash0-threshold-critical` plus `$__threshold`, and `PersesDashboard` `perses.dev/v1alpha1` with `PrometheusDataSource`, `TimeSeriesChart` and `PrometheusTimeSeriesQuery`. Both were checked against dash0.com docs on 2026-11-09. Neither has been applied to a Dash0 org.
-- Unverified: whether `sum by (...)` without `le` is right for these histograms in Dash0. Dash0 says `histogram_quantile` works directly on `otel_metric_name` selectors, but if the panels come back empty, try `sum by (le, incident_type, incident_priority)`. Also unverified: whether `increase()` over a 1 h window gives a meaningful ratio for a demo with a handful of incidents.
-
-Open question: should a high-priority incident downgraded to normal mid-flight keep its recorded outcomes?
+Validate final PromQL and imported panel output against the actual dataset during
+cloud QA. YAML parsing alone cannot establish the provider accepted this resource.

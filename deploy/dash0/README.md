@@ -1,17 +1,17 @@
 # dash0
 
-The collector is the only workload that holds a Dash0 credential. Everything here either runs it or describes what Dash0 should show. Owner: Kunj.
+The collector is the only workload that holds a Dash0 credential. Everything here either runs it or describes what Dash0 should show. Setup owner: Anurup. See [the operations runbook](../../observability/README.md) for the current release and proof gates.
 
 ## Files
 
 | File | What | Applied by |
 | --- | --- | --- |
-| `kustomization.yaml` | Collector base: ConfigMap, Deployment, Service `otel-collector` (4317 gRPC, 4318 HTTP, 13133 health). No namespace; the platform overlay sets it. | Ali's overlay, or `kubectl apply -n <ns> -k deploy/dash0` |
+| `kustomization.yaml` | Collector base: ConfigMap, Deployment, Service `otel-collector` (4317 gRPC, 4318 HTTP, 13133 health). `team-backstage` namespace. | Ali's overlay, or `kubectl --context CONTEXT -n team-backstage apply -k deploy/dash0` |
 | `collector-configmap.yaml` | Byte copy of `observability/otel-collector.yaml` | via kustomization |
 | `dash0-secret.example.yaml` | Placeholder Secret `dash0-credentials` (keys `DASH0_OTLP_ENDPOINT`, `DASH0_AUTH_TOKEN`, optional `DASH0_DATASET`). Not in the kustomization. | Create the real one with `kubectl create secret` (command in the file) |
-| `slo-check-rules.yaml` | `PrometheusRule` check rules for the high-priority SLO | Dash0 operator, only if a `Dash0Monitoring` resource exists in the namespace |
-| `dashboard-incident-timing.yaml` | `PersesDashboard` for the four timing histograms and three SLO ratios | Dash0 operator, or `dash0 dashboards create -f` |
-| `metrics.md` | Metric names, attributes, SLO outcome rules, PromQL sheet | Luke implements the emitter |
+| `slo-check-rules.yaml` | Inactive historical SLO proposal; do not apply (no corresponding emitter) | Deferred outside incident-evidence scope |
+| `dashboard-incident-timing.yaml` | `PersesDashboard` for measured HTTP, ES, search, document projection and revision lag | Dash0 operator, or `dash0 dashboards create -f` |
+| `metrics.md` | Implemented metric names, units, labels and interpretation | Luke implements the emitter |
 
 Regenerate the ConfigMap after editing the collector config, and check drift:
 

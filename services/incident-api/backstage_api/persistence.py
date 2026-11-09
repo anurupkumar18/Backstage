@@ -1,12 +1,14 @@
 """Versioned Elasticsearch checkpoint for the single-writer overflow demo."""
 
-from dataclasses import asdict
+import json
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from threading import Lock
+from contextlib import nullcontext
 
 from elasticsearch import ApiError as ElasticsearchError
 from elasticsearch import ConflictError, NotFoundError, TransportError
-from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags, get_current_span, set_span_in_context
+from opentelemetry.trace import Link, NonRecordingSpan, SpanContext, TraceFlags, get_current_span, set_span_in_context
 
 from .badges import BadgeRecovery
 from .engine import ApiError, Incident, IncidentStore, RoomEvidence, timestamp
@@ -118,10 +120,12 @@ class ElasticsearchCheckpoint:
     def __init__(self, client, alias):
         self.client = client
         self.alias = alias
+        self.telemetry = None
 
     def _get(self, *, source):
         try:
-            return self.client.get(index=self.alias, id=DOCUMENT_ID, source=source)
+            with self.telemetry.es_operation("load") if self.telemetry else nullcontext():
+                return self.client.get(index=self.alias, id=DOCUMENT_ID, source=source)
         except NotFoundError as error:
             if isinstance(error.body, dict) and error.body.get("found") is False:
                 return None
@@ -148,14 +152,15 @@ class ElasticsearchCheckpoint:
             seq_no, primary_term = revision
             condition = {"if_seq_no": seq_no, "if_primary_term": primary_term}
         try:
-            response = self.client.index(
-                index=self.alias,
-                id=DOCUMENT_ID,
-                document=checkpoint_document(store),
-                require_alias=True,
-                include_source_on_error=False,
-                **condition,
-            )
+            with self.telemetry.es_operation("save") if self.telemetry else nullcontext():
+                response = self.client.index(
+                    index=self.alias,
+                    id=DOCUMENT_ID,
+                    document=checkpoint_document(store),
+                    require_alias=True,
+                    include_source_on_error=False,
+                    **condition,
+                )
             return response["_seq_no"], response["_primary_term"]
         except ConflictError as error:
             raise CheckpointConflict() from error
@@ -166,19 +171,42 @@ class ElasticsearchCheckpoint:
         self.client.close()
 
 
+@dataclass(frozen=True)
+class CommittedSnapshot:
+    """Owned immutable copy; projection cannot observe an in-flight transaction."""
+    document_json: str
+    revision: tuple | None
+
+    def document(self):
+        return json.loads(self.document_json)
+
+
 class IncidentRuntime:
     """Serialize commands and publish changes only after durable acknowledgement."""
 
-    def __init__(self, tracer, checkpoint=None):
+    def __init__(self, tracer, checkpoint=None, telemetry=None):
         self.tracer = tracer
+        self.telemetry = telemetry
         self.checkpoint = checkpoint
         self.lock = Lock()
         self.store = IncidentStore(tracer) if checkpoint is None else None
         self.revision = None
+        self.committed = None
+
+    def _publish(self):
+        self.committed = CommittedSnapshot(json.dumps(checkpoint_document(self.store), sort_keys=True), self.revision)
+
+    def snapshot(self):
+        with self.lock:
+            self._load()
+            if self.committed is None:
+                self._publish()
+            return self.committed
 
     def _load(self):
         if self.store is None:
             self.store, self.revision = self.checkpoint.load(self.tracer)
+            self._publish()
 
     def check(self):
         if self.checkpoint is not None:
@@ -193,6 +221,7 @@ class IncidentRuntime:
             for _ in range(2):
                 self._load()
                 before = self.store.mutation_count
+                sequences = {key: len(item.events) for key, item in self.store.incidents.items()}
                 try:
                     result = operation(self.store)
                 except Exception:
@@ -200,7 +229,11 @@ class IncidentRuntime:
                         self.store = None
                     raise
 
-                if self.checkpoint is None or self.store.mutation_count == before:
+                if self.store.mutation_count == before:
+                    return result
+                if self.checkpoint is None:
+                    self._publish()
+                    self._committed_events(sequences)
                     return result
 
                 try:
@@ -213,8 +246,28 @@ class IncidentRuntime:
                     # Reload before serving reads or applying the caller's retry.
                     self.store = None
                     raise
+                self._publish()
+                self._committed_events(sequences)
                 return result
             raise unavailable()
+
+    def _committed_events(self, sequences):
+        request_context = get_current_span().get_span_context()
+        links = [Link(request_context)] if request_context.is_valid else []
+        for incident in self.store.incidents.values():
+            for event in incident.events[sequences.get(incident.id, 0):]:
+                attributes = {"incident.id": incident.id, "incident.event.id": event["event_id"],
+                              "incident.event.type": event["type"], "incident.state": event["state_to"],
+                              "storage.mode": "memory" if self.checkpoint is None else "elasticsearch"}
+                with self.tracer.start_as_current_span("incident.transition", context=incident.trace_context,
+                                                       links=links, attributes=attributes):
+                    if self.telemetry:
+                        self.telemetry.count("backstage.incident.transitions", {
+                            "event.type": event["type"], "state": event["state_to"],
+                            "storage.mode": attributes["storage.mode"]})
+                        self.telemetry.event("incident.transition.committed", incident_id=incident.id,
+                                             event_id=event["event_id"], event_type=event["type"],
+                                             state=event["state_to"], storage_mode=attributes["storage.mode"])
 
     def close(self):
         if self.checkpoint is not None:

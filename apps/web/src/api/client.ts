@@ -1,4 +1,9 @@
 import type {
+  EvidencePage,
+  EvidenceQuery,
+  IncidentDiagnostics,
+} from "../diagnostics/types";
+import type {
   Action,
   ApiErrorCode,
   ApiResult,
@@ -32,6 +37,7 @@ const KNOWN_CODES: readonly ApiErrorCode[] = [
   "idempotency_conflict",
   "invalid_payload",
   "unavailable",
+  "evidence_unavailable",
 ];
 
 const FALLBACK_BY_STATUS: Record<number, ApiErrorCode> = {
@@ -44,35 +50,72 @@ const FALLBACK_BY_STATUS: Record<number, ApiErrorCode> = {
 };
 
 export function newIntent(incidentId: string, body: Action): ActionIntent {
-  return { incidentId, body, key: `${body.action}-${incidentId}-${crypto.randomUUID()}` };
+  return {
+    incidentId,
+    body,
+    key: `${body.action}-${incidentId}-${crypto.randomUUID()}`,
+  };
 }
 
 export function sameBody(a: Action, b: Action): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function parseError(status: number, json: unknown): { code: ApiErrorCode; message: string } {
-  const error = (json as { error?: { code?: unknown; message?: unknown } } | null)?.error;
-  const code = KNOWN_CODES.find((known) => known === error?.code) ?? FALLBACK_BY_STATUS[status] ?? "unavailable";
-  const message = typeof error?.message === "string" ? error.message : `Request failed with status ${status}.`;
+function parseError(
+  status: number,
+  json: unknown,
+): { code: ApiErrorCode; message: string } {
+  const error = (
+    json as { error?: { code?: unknown; message?: unknown } } | null
+  )?.error;
+  const code =
+    KNOWN_CODES.find((known) => known === error?.code) ??
+    FALLBACK_BY_STATUS[status] ??
+    "unavailable";
+  const message =
+    typeof error?.message === "string"
+      ? error.message
+      : `Request failed with status ${status}.`;
   return { code, message };
 }
 
-export function createClient({ transport, getToken, maxRetries = 2 }: ClientOptions) {
+export function createClient({
+  transport,
+  getToken,
+  maxRetries = 2,
+}: ClientOptions) {
   async function request<T>(
     method: "GET" | "POST",
     path: string,
-    options: { body?: unknown; headers?: Record<string, string>; signal?: AbortSignal; retry?: boolean } = {},
+    options: {
+      body?: unknown;
+      headers?: Record<string, string>;
+      signal?: AbortSignal;
+      retry?: boolean;
+    } = {},
   ): Promise<ApiResult<T>> {
-    const headers = { Authorization: `Bearer ${getToken()}`, ...options.headers };
+    const headers = {
+      Authorization: `Bearer ${getToken()}`,
+      ...options.headers,
+    };
     const attempts = options.retry === false ? 1 : maxRetries + 1;
     for (let attempt = 1; ; attempt += 1) {
       try {
-        const response = await transport({ method, path, headers, body: options.body, signal: options.signal });
+        const response = await transport({
+          method,
+          path,
+          headers,
+          body: options.body,
+          signal: options.signal,
+        });
         if (response.status >= 200 && response.status < 300) {
           return { ok: true, data: response.json as T };
         }
-        return { ok: false, status: response.status, ...parseError(response.status, response.json) };
+        return {
+          ok: false,
+          status: response.status,
+          ...parseError(response.status, response.json),
+        };
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           throw error;
@@ -82,7 +125,8 @@ export function createClient({ transport, getToken, maxRetries = 2 }: ClientOpti
             ok: false,
             status: 0,
             code: "network",
-            message: "Could not reach the incident API. Check the connection and try again.",
+            message:
+              "Could not reach the incident API. Check the connection and try again.",
           };
         }
       }
@@ -90,18 +134,45 @@ export function createClient({ transport, getToken, maxRetries = 2 }: ClientOpti
   }
 
   return {
-    getStatus: (signal?: AbortSignal) => request<PublicStatus>("GET", "/status", { signal }),
-    listIncidents: (signal?: AbortSignal) => request<IncidentsPage>("GET", "/incidents", { signal }),
+    getStatus: (signal?: AbortSignal) =>
+      request<PublicStatus>("GET", "/status", { signal }),
+    listIncidents: (signal?: AbortSignal) =>
+      request<IncidentsPage>("GET", "/incidents", { signal }),
     getIncident: (id: string, signal?: AbortSignal) =>
-      request<Incident>("GET", `/incidents/${encodeURIComponent(id)}`, { signal }),
-    listEvents: (id: string, signal?: AbortSignal) =>
-      request<EventsPage>("GET", `/incidents/${encodeURIComponent(id)}/events`, { signal }),
-    applyAction: (intent: ActionIntent, signal?: AbortSignal) =>
-      request<Incident>("POST", `/incidents/${encodeURIComponent(intent.incidentId)}/actions`, {
-        body: intent.body,
-        headers: { "Idempotency-Key": intent.key },
+      request<Incident>("GET", `/incidents/${encodeURIComponent(id)}`, {
         signal,
       }),
+    listEvents: (id: string, signal?: AbortSignal) =>
+      request<EventsPage>(
+        "GET",
+        `/incidents/${encodeURIComponent(id)}/events`,
+        { signal },
+      ),
+    getDiagnostics: (id: string, signal?: AbortSignal) =>
+      request<IncidentDiagnostics>(
+        "GET",
+        `/incidents/${encodeURIComponent(id)}/diagnostics`,
+        { signal },
+      ),
+    searchEvidence: (query: EvidenceQuery, signal?: AbortSignal) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(query)) {
+        if (value !== undefined && value !== "") params.set(key, String(value));
+      }
+      return request<EvidencePage>("GET", `/evidence/search?${params}`, {
+        signal,
+      });
+    },
+    applyAction: (intent: ActionIntent, signal?: AbortSignal) =>
+      request<Incident>(
+        "POST",
+        `/incidents/${encodeURIComponent(intent.incidentId)}/actions`,
+        {
+          body: intent.body,
+          headers: { "Idempotency-Key": intent.key },
+          signal,
+        },
+      ),
   };
 }
 

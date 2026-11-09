@@ -16,6 +16,7 @@ spec:
       annotations:
         backstage.dev/config-source: observability/otel-collector.yaml
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -24,6 +25,8 @@ spec:
           image: otel/opentelemetry-collector-contrib:0.164.0
           args: ["--config=/etc/otelcol/config.yaml"]
           env:
+            - name: GOMEMLIMIT
+              value: 400MiB
             - name: DASH0_OTLP_ENDPOINT
               valueFrom:
                 secretKeyRef:

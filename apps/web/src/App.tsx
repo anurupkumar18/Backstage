@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IncidentEvidence } from "./diagnostics/IncidentEvidence";
 import { createClient, type ApiClient } from "./api/client";
 import { fetchTransport } from "./api/transport";
 import { useBoard } from "./hooks/useBoard";
@@ -32,10 +33,14 @@ function BoardRoute({ client, announce, registerProbe }: BoardRouteProps) {
 
   const firstIncident = board.incidents[0];
   const run = actions.run;
-  registerProbe(firstIncident ? () => void run(firstIncident, "approve") : null);
+  useEffect(() => {
+    registerProbe(firstIncident ? () => void run(firstIncident, "approve") : null);
+    return () => registerProbe(null);
+  }, [firstIncident, run, registerProbe]);
 
   return (
     <BoardView
+      renderEvidence={(incident) => <IncidentEvidence key={incident.id} incident={incident} client={client} mockMode={MOCK_MODE} />}
       incidents={board.incidents}
       eventsById={board.eventsById}
       actionState={actions.actionState}
@@ -63,17 +68,17 @@ export default function App() {
 
   const identity = DEMO_IDENTITIES.find((candidate) => candidate.id === identityId) ?? DEMO_IDENTITIES[0];
   const token = MOCK_MODE ? (identity?.token ?? "") : (liveTokens[identityId] ?? "");
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
 
   const client = useMemo(
     () =>
       createClient({
         transport: mockApi ? createMockTransport(mockApi, MOCK_LATENCY_MS) : fetchTransport(API_BASE_URL),
-        getToken: () => tokenRef.current,
+        getToken: () => token,
       }),
-    [mockApi],
+    [mockApi, token],
   );
+  // Opaque generation resets scoped caches, actions and inspector state even for the same role.
+  const credentialGeneration = useMemo(() => crypto.randomUUID(), [client]);
 
   const registerProbe = useCallback((next: (() => void) | null) => {
     probe.current = next;
@@ -105,10 +110,10 @@ export default function App() {
       devPanel={devPanel}
     >
       {route === "board" ? (
-        <BoardRoute key={`board-${identityId}`} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
+        <BoardRoute key={`board-${identityId}-${credentialGeneration}`} client={client} announce={setAnnouncement} registerProbe={registerProbe} />
       ) : (
         <StatusRoute
-          key={`${route}-${identityId}`}
+          key={`${route}-${identityId}-${credentialGeneration}`}
           client={client}
           variant={route === "projector" ? "projector" : "attendee"}
         />

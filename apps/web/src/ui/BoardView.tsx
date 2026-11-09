@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { Incident, PresenceCounts, ProtocolEvent } from "../api/types";
 import { PresenceField } from "./PresenceField";
 import {
@@ -35,6 +35,7 @@ export interface BoardViewProps {
    * incident by id, room, type or state and selects it, which needs no backend.
    */
   onCommand?: (text: string) => void;
+  renderEvidence?: (incident: Incident) => ReactNode;
 }
 
 export function BoardView({
@@ -48,6 +49,7 @@ export function BoardView({
   loading,
   presence,
   onCommand,
+  renderEvidence,
 }: BoardViewProps) {
   const titleId = useId();
   const listId = useId();
@@ -129,7 +131,7 @@ export function BoardView({
               ))}
             </ul>
           </section>
-          <Detail incident={selected} events={eventsById[selected.id]} state={actionState[selected.id]} onAction={onAction} />
+          <Detail incident={selected} events={eventsById[selected.id]} state={actionState[selected.id]} onAction={onAction} evidence={renderEvidence?.(selected)} />
         </div>
       ) : null}
 
@@ -350,13 +352,14 @@ function IncidentCard({ incident, state, selected, focusIncidentId, jump, onSele
 }
 
 interface DetailProps {
+  evidence?: ReactNode;
   incident: Incident;
   events: ProtocolEvent[] | undefined;
   state: ActionState | undefined;
   onAction(incident: Incident, action: "approve" | "ack"): void;
 }
 
-function Detail({ incident, events, state, onAction }: DetailProps) {
+function Detail({ incident, events, state, onAction, evidence }: DetailProps) {
   const titleId = useId();
   const planId = useId();
   const progressId = useId();
@@ -487,12 +490,12 @@ function Detail({ incident, events, state, onAction }: DetailProps) {
         </section>
       </div>
 
-      <section className="panel" aria-labelledby={feedId}>
+      {evidence ?? <section className="panel" aria-labelledby={feedId}>
         <h3 id={feedId} className="panel__title">
           Agent protocol
         </h3>
         <Feed events={events} />
-      </section>
+      </section>}
     </section>
   );
 }

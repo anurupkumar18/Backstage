@@ -63,6 +63,15 @@ spec:
             - secretRef: {name: incident-secrets}
           env:
             - {name: APP_MODE, value: live}
+            # Keep this revision equal to prepare-runtime CODE_SHA above when releasing.
+            - {name: CODE_SHA, value: 8e61ac90ada0469e3d12c817656a166f80222ef1}
+            # Bootstrap the isolated evidence alias/mapping before changing to true.
+            - {name: EVIDENCE_PROJECTION_ENABLED, value: "false"}
+            - {name: OTEL_ENABLED, value: "true"}
+            - {name: OTEL_SERVICE_NAME, value: incident-api}
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: 'http://otel-collector:4318'}
+            - {name: OTEL_EXPORTER_OTLP_PROTOCOL, value: http/protobuf}
+            - {name: OTEL_RESOURCE_ATTRIBUTES, value: 'deployment.environment.name=demo,service.namespace=team-backstage,service.version=$(CODE_SHA)'}
             - {name: PYTHONPATH, value: '/runtime/python:/runtime/repo/services/incident-api'}
             - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
             - {name: PYTHONUNBUFFERED, value: "1"}

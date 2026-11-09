@@ -60,6 +60,17 @@ const raise: ProtocolEvent = {
 };
 
 describe("BoardView", () => {
+  it("mounts the isolated evidence inspector for the selected incident", async () => {
+    const user = userEvent.setup();
+    board({
+      incidents: [incident(), incident({ id: "inc-2", summary: "Mic lost" })],
+      renderEvidence: (selected) => <p>Inspecting {selected.id}</p>,
+    });
+    expect(screen.getByText("Inspecting inc-1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Mic lost" }));
+    expect(screen.getByText("Inspecting inc-2")).toBeInTheDocument();
+  });
+
   it("renders buttons only for allowed approve and ack actions", () => {
     const { rerender, view } = board({ incidents: [incident({ allowed_actions: ["approve"] })] });
     expect(screen.getByRole("button", { name: "Approve plan for Room B overflow" })).toBeInTheDocument();
@@ -145,8 +156,8 @@ describe("BoardView", () => {
         incident({ state: "verifying", allowed_actions: [], verification: { status: "pending", summary: "Door count under 5 for 30 s." } }),
       ],
     });
-    expect(screen.getAllByText("High priority").length).toBeGreaterThan(0);
-    expect(screen.getByText("Verifying: waiting for evidence")).toBeInTheDocument();
+    expect(screen.getAllByText(/High priority/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Verifying: waiting for evidence").length).toBeGreaterThan(0);
     expect(screen.getByText("Door count under 5 for 30 s.")).toBeInTheDocument();
 
     rerender(
@@ -154,7 +165,7 @@ describe("BoardView", () => {
         incidents: [incident({ state: "resolved", allowed_actions: [], verification: { status: "passed", summary: "Count stayed low." } })],
       }),
     );
-    expect(screen.getByText("Verification passed")).toBeInTheDocument();
+    expect(screen.getAllByText("Verified").length).toBeGreaterThan(0);
   });
 
   it("shows venue room names while ids on the wire stay the same", () => {
@@ -265,8 +276,9 @@ describe("AppShell", () => {
 
   it("offers a labelled role switcher and hides the token field in mock mode", () => {
     shell("board", true);
-    expect(screen.getByLabelText("Viewing as")).toHaveValue("org");
-    expect(screen.getByRole("option", { name: "Attendee (tier 0)" })).toBeInTheDocument();
+    const roles = screen.getByRole("group", { name: "Viewing as" });
+    expect(within(roles).getByRole("button", { name: "Organizer, tier 3" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(roles).getByRole("button", { name: "Attendee, tier 0" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByLabelText("API token")).not.toBeInTheDocument();
   });
 

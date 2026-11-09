@@ -4,23 +4,25 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.164.0
     command: ["--config=/etc/otelcol/config.yaml"]
+    mem_limit: 512m
     volumes:
       - ./otel-collector.local.yaml:/etc/otelcol/config.yaml:ro
     environment:
       OTEL_CORS_ALLOWED_ORIGIN: ${OTEL_CORS_ALLOWED_ORIGIN:-http://localhost:5173}
     ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "13133:13133"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:13133:13133"
 
   otel-collector-dash0:
     profiles: ["dash0"]
     image: otel/opentelemetry-collector-contrib:0.164.0
     command: ["--config=/etc/otelcol/config.yaml"]
+    mem_limit: 512m
     volumes:
       - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
     env_file: .env
     ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "13133:13133"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:13133:13133"
